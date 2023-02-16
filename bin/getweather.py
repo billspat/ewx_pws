@@ -21,7 +21,7 @@ def main():
         stations =  ewx_pws.stations_from_file(csvfile)
         print(f"file has {len(stations)} stations")
     else:
-        print("file not found {csvfile}")
+        print(f"file not found {csvfile}")
         return(1)
     
     # get recent data for now (ignore start and end times)
