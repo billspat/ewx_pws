@@ -3,10 +3,11 @@
 
 ```{toctree}
 :maxdepth: 1
-:hidden:
 
+roadmap.md
 example.ipynb
 changelog.md
 contributing.md
+
 autoapi/index
 ```

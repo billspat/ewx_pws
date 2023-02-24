@@ -39,3 +39,9 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 # a list of builtin themes.
 #
 html_theme = "sphinx_rtd_theme"
+
+# -- Options for Myst python notebook output -------------------------------------------------
+nb_execution_timeout = 120
+nb_execution_mode = "auto"
+
+exclude_patterns = ['example_notebook.md']

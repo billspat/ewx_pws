@@ -2,6 +2,20 @@
 
 This document is for Enviroweather staff to get setup and to work on this code base.   We use our institutions Gitlab install for issue tracking and merge requests
 
+## Overview of Process
+
+ - in the gitlab project, create an issue with a number N
+ - and/or pick an issue to work on
+ - create a branch for the issue ( on local computer), prefixed with number N
+ - do a bunch of commits in the branch local
+ - add tests in local branch to ensure it works
+ - push branch to project when it's done (or close)
+ - create a merge request for branch 
+ - someone reviews code and merges into main, squashing commits and re-write commit message "fixes #N"
+ - once all the working code in the branch is incorporated into the main branch, delete branch in git project
+ - close any issues related to the branch/merge request, make a note in the issue which MR/commit is most relevant
+ 
+
 ## Creating issues in gitlab
 
 ### File Issue for fix
@@ -28,13 +42,16 @@ to be written: how to edit the documentation
 
 Here's how to set up `ewx_pws` for local development.
 
-0. Install the python `poetry` utility which aids development.  See https://python-poetry.org/ for detail.    This is installed system wide, not necessaryly part of an environment 
+0. Install the python `poetry` utility which aids development by helping to manage dependencies and create a build system.  This replaces the standard `pip install -r requirements.txt` process See https://python-poetry.org/ for detail.    This is installed system wide, not necessaryly part of an environment 
 1. Download a copy of `ewx_pws` locally.
 2. Install `ewx_pws` using `poetry`:
 
     ```console
     $ poetry install
     ```
+
+Note this project may switch to a different build system in the future. 
+
 
 ## Coding
 
@@ -63,6 +80,53 @@ Note: some tests require a configuration file of station API log-in secrets.  Cr
 From the top directory, run
 
 `pytest tests/`
+
+
+## building
+
+TBD
+
+## building documentation
+
+The documentation is based on Sphinx, and is a collection of markdown-formatted files, both in the root dir and `/doc` directory.  
+this includes a python notebook with some explanatory code.   
+
+### Requirements for building documentation
+
+There is a `docs/requirements.txt` for packages need to compile the document to HTML.   Running
+
+`pip install -r `docs/requirements.txt` 
+
+In addition the ipython notebook requires an environment configuration file (as it does not use the CSV format yet), 
+to build the documentation, ensure there is a copy of the configuration file (.env) in the `./docs` directory (for now)
+
+### building
+
+You can build the docs in 3 ways using the terminal
+
+first, `cd docs`
+
+1. if you have `make` installed (MacOS, Linux)
+
+in the docs folder
+```
+make clean
+make html
+```
+
+2. If you are using Windows
+
+(untested)
+in the docs folder `cmd make.bat`
+
+3. Using the sphinx command
+
+```
+rm -rf _build/*
+SPHINXPROJ=ewx_pws python -m sphinx . _build
+```
+
+The documentation will be in the `./docs/_build/html` folder
 
 
 ## Using the CLI to get weather data

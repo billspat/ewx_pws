@@ -24,7 +24,7 @@ To see usage and other options for this CLI, use
 
 ## Contributing
 
-We are not seeking contributions at this stage.   EWX staff, see [contributing](docs/contributing.md) for development documentation. 
+We are not seeking contributions at this stage.   EWX staff, see [contributing](CONTRIBUTING.MD) for development documentation. 
 
 ## License
 
