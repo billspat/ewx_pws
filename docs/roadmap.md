@@ -66,12 +66,14 @@ create validator super class and classes for each type of observation that can t
      - can run tests from command line
      - build package and documentation
      - can run bin/file.py (done)
-     - installable  eg.`pip install git+https://github.com/billspat/ewx_pws.git`
+     - installable by uploading to pypi eg.`pip install git+https://github.com/billspat/ewx_pws.git`
+     - installable as wheel
     - DB insert using sqlalchemy, use sqlite for testing
     - Need to make a wheel for airflow. Currently uses 'poetry' but should only use setup tools. 
     - can save raw and transformed as needed (raw to storage, transformed to db)
 
  - use it with airflow 
+    - on local computer, install MWAA test environmwent 
     - test can 'install' it to airflow using wheel
     - basic DAG to import python and pull data on a simple schedule, 1 to 10 stations
     - for one weather station, use embedded config e.g. CSV file in DAG folder
