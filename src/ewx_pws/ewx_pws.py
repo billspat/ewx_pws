@@ -118,24 +118,46 @@ def stations_from_file(csv_file_path:str):
     returns a dictionary of dictionaries, keyed on 'station ID'
     
     """
-    station_field_names = ["station_id", "station_type", "station_config"]
+    try:
+        if not os.path.exists(csv_file_path): 
+            warnings.warn(Warning("File not found {}".format(csv_file_path)))
+            return None
+        
+        station_field_names = ["station_id", "station_type", "station_config"]
+        stations = {}
+        header = True
+
+        # Checks for header, ID column, and ensures file isn't just empty
+        with open(csv_file_path, "r") as csvfile:
+            line = csvfile.readline()
+            if not line:
+                warnings.warn(Warning("emptycsv, {} read as empty".format(csv_file_path)))
+                return None
+            if '{' in line:
+                header = False
+            if line.lower().startswith("id,"):
+                station_field_names.insert(0, "id")
+
+        with open(csv_file_path, "r") as csvfile:
+            csvreader = csv.DictReader(csvfile,  fieldnames = station_field_names, delimiter=",", quotechar="'") # 
+            if header:
+                next(csvreader)
+            for row in csvreader:
+                station_id = row['station_id']
+                # try
+                #print(station_id)
+                #print(row['station_config'] )
+                try:
+                    row['station_config'] = json.loads(row['station_config'])
+                except ValueError as ex:
+                    print(("ValueError: Invalid json encountered reading in ewx_pws.py.stations_from_file {}:\n {}".format(csv_file_path, ex)))
+                    raise ValueError
+                stations[station_id] = row
+    except TypeError as ex:
+        print("TypeError: Exception encountered reading in ewx_pws.py.stations_from_file {}:\n {}".format(csv_file_path, ex))
+        raise ex
     
-    if not os.path.exists(csv_file_path): 
-        warnings.warn(f"file not found {csv_file_path}")
-        return None
-    
-    stations = {}
-    with open(csv_file_path, "r") as csvfile:
-        csvreader = csv.DictReader(csvfile,  fieldnames = station_field_names, delimiter=",", quotechar="'") # 
-        header = next(csvreader)
-        for row in csvreader:
-            station_id = row['station_id']
-            # try
-            print(row['station_config'] )
-            row['station_config'] = json.loads(row['station_config'])
-            stations[station_id] = row
-    
-    return stations    
+    return stations
 
 ## random python notes 
 # to convert the dictionary of stations into a simple list
