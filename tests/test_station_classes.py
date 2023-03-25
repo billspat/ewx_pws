@@ -1,4 +1,4 @@
-from ewx_pws.weather_stations import WeatherStation, WeatherStationConfig
+from ewx_pws.weather_stations import  WeatherStationConfig, WeatherStation,ZentraConfig, ZentraStation
 
 import pytest, json 
 
@@ -21,7 +21,7 @@ def fake_station_configs(fake_stations_list):
     
     for fs in fake_stations_list:
         fake_config = json.loads(fs[2])
-        station_type = fs[1].lower()
+        station_type = fs[1]
         station_id = fs[0]
         fake_config.update({'id': station_id, 'station_type': station_type})
         fake_configs.append(fake_config)
@@ -44,3 +44,9 @@ def test_can_subclass_weather_station(fake_station_configs):
     
     assert isinstance(fake_station,WeatherStation)
     
+def test_zentra_subclass_weather_station(fake_station_configs):
+    
+    zconfig = ZentraConfig.parse_obj(fake_station_configs[1])
+    zstation = ZentraStation(zconfig)
+    
+    assert isinstance(zstation,WeatherStation)

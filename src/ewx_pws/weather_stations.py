@@ -28,14 +28,14 @@ DEBUG=False
 _version = '0.0.1'
 
 # station type type, like an enum
-STATION_TYPE = Literal['zentra', 'onset', 'davis', 'rainwise', 'spectrum', 'generic']  # generic type is a hack for testing
+STATION_TYPE = Literal['ZENTRA', 'ONSET', 'DAVIS', 'RAINWISE', 'SPECTRUM', 'GENERIC']  # generic type is a hack for testing
 
 # temporary type used when starting to protype station classes,  not for actual use
 # WeatherStationConfig = dict
 
 class WeatherStationConfig(BaseModel):
-    id : str
-    station_type : STATION_TYPE = "generic"
+    station_id : str = None
+    station_type : STATION_TYPE = "GENERIC"
     tz : str = "ET" # Field(description="time zone where the station is located")  # TODO create a timezone literal type
     
     
@@ -44,11 +44,19 @@ class WeatherStationConfig(BaseModel):
 class WeatherStation(ABC):
     """configuration and information for a weather station and it's API"""
 
+    @classmethod
+    def init_from_dict(cls, config:dict):
+        """ accept a dictionary to create this class, rather than the Type class"""
+    
+        # this will raise error if config dictionary is not correct
+        station_config = WeatherStationConfig.parse_obj(config)
+        return(cls(station_config))
+    
+    
     def __init__(self, config:WeatherStationConfig):#### this won't work to have the 'config' fields of other classes be strong types!  
         self.config = config
         # pull out some of the elements in the dict
-        self._id = config['station_id']
-         
+        self._id = config.station_id
         self.current_reading = None
         
     # convenience/hiding methods
@@ -95,12 +103,10 @@ class WeatherStation(ABC):
             else:
                 end_datetime = datetime.fromisoformat(end_datetime_str)
 
-
         params = self.station_config
         params['start_datetime'] = self._format_time(start_datetime)
         params['end_datetime'] = self._format_time(end_datetime)
-
-
+        
         try:
             response = self._get_reading(params)
         except Exception as e:
@@ -150,7 +156,11 @@ class WeatherStation(ABC):
     
 
 # ONSET ###################
+
+
 class OnsetConfig(WeatherStationConfig):
+    station_id : str = None
+    station_type : str = 'ONSET'
     sn : str  = Field(description="The serial number of the device")
     client_id : str = Field(description="client specific value provided by Onset")
     client_secret : str = Field(description="client specific value provided by Onset")
@@ -174,8 +184,7 @@ class OnsetStation(WeatherStation):
 
     def __init__(self,config: OnsetConfig):
         """ create class from config Type"""
-        self.station_type = 'onset'
-        self.super.__init__(config)
+        super().__init__(config)
 
     def _get_auth(self):
         """
@@ -213,29 +222,62 @@ class OnsetStation(WeatherStation):
         print(f" this would be a reading from {self.id} for {params.get('start_datetime')} to {params.get('end_datetime')}")
         return "{}"
 
-
+class ZentraConfig(WeatherStationConfig):
+    station_type : STATION_TYPE = "ZENTRA"
+    
 class ZentraStation(WeatherStation):
     """Zentra Brand Weather Station"""    
-    def __init__(self,config:WeatherStationConfig):
-        self.station_type = 'zentra'
-        self.super.__init__(config)
+    def __init__(self,config:ZentraConfig):
+        super().__init__(config)
         
-            
+    def _check_config(self):
+        return True
+    
+    def _get_reading(self):
+        return('{}')
+        
+
+class DavisConfig(WeatherStationConfig):
+    station_type : STATION_TYPE = "DAVIS"   
+        
 class DavisStation(WeatherStation):
     def __init__(self,config:WeatherStationConfig):
         self.station_type = 'davis'
-        self.super.__init__(config)
+        super().__init__(config)
     
+    def _check_config(self):
+        return True
+    
+    def _get_reading(self):
+        return('{}')
+
+class RainwiseConfig(WeatherStationConfig):
+    station_type : STATION_TYPE = "RAINWISE"
 
 class RainwiseStation(WeatherStation):
     def __init__(self,config:WeatherStationConfig):
         self.station_type = 'rainwise'
-        self.super.__init__(config)
+        super().__init__(config)
+
+    def _check_config(self):
+        return True
+    
+    def _get_reading(self):
+        return('{}')
+    
+class SpectrumConfig(WeatherStationConfig):
+    station_type : STATION_TYPE = "SPECTRUM"
 
 class SpectrumStation(WeatherStation):
     def __init__(self,config:WeatherStationConfig):
         self.station_type = 'spectrum'
-        self.super.__init__(config)  
+        super().__init__(config)  
+        
+    def _check_config(self):
+        return True
+    
+    def _get_reading(self):
+        return('{}')
 
 # METHODS UTILIZING CLASS
 
