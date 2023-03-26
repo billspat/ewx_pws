@@ -61,6 +61,14 @@ class WeatherStation(ABC):
     # used by subclasses as default when there is no data from station
     empty_response = ['{}']
     
+    def __init__(self, config:GenericConfig):
+        """create station object using Config data model """    
+        self.config = config
+        self._id = config.station_id
+        # store req/resp in object for debugging
+        self.current_api_request = None
+        self.current_api_response = None
+        
     #### class methods
     @classmethod
     def init_from_dict(cls, config:dict):
@@ -96,12 +104,7 @@ class WeatherStation(ABC):
             'config': config_dict
         }
         cls.init_from_dict(station_config_dict)
-        
-    def __init__(self, config:GenericConfig):
-        """create station object using Config data model """    
-        self.config = config
-        self._id = config.station_id
-        
+                
     # convenience/hiding methods
     @property
     def id(self):
@@ -122,7 +125,7 @@ class WeatherStation(ABC):
         return(True)
         
     @abstractmethod
-    def _get_reading(self,params):
+    def _get_readings(self,params):
         """create API request and return str of json"""
         # get auth
         print(f" this would be a reading from {self.id} for {params.get('start_datetime')} to {params.get('end_datetime')}")
@@ -151,29 +154,26 @@ class WeatherStation(ABC):
         params['end_datetime'] = self._format_time(end_datetime)
         
         try:
-            response = self._get_reading(params)
+            self.current_api_response = self._get_readings(params)
         except Exception as e:
             print("Error getting reading from station {self.id}: {e}")
-            raise e
+            raise e        
+        
+        # # add meta data
+        # reading_metadata = {
+        #     "station_type": self.config.station_type,
+        #     "station_id": self.id,
+        #     "timezone": self.config.tz, 
+        #     "start_datetime": start_datetime,
+        #     "end_datetime": end_datetime,
+        #     "request_time": request_time,
+        #     "package_version": '0'
+        # }
+        
+        # response.append(reading_metadata)
         
         
-        # add meta data
-        reading_metadata = {
-            "station_type": self.config.station_type,
-            "station_id": self.id,
-            "timezone": self.config.tz, 
-            "start_datetime": start_datetime,
-            "end_datetime": end_datetime,
-            "request_time": request_time,
-            "package_version": '0'
-        }
-        
-        response.append(reading_metadata)
-        
-        # save for later
-        self.current_reading = response
-        
-        return response
+        return self.current_api_response
 
     def get_test_reading(self):
         """ test that current config is working and station is online
@@ -183,13 +183,16 @@ class WeatherStation(ABC):
         """
 
         try:
-            r = self.get_reading()
+            r = self.get_readings()
         except Exception as e:
+            warnings.warn(f"error when testing api for station {self.id}: {e}")
             return(False)
 
         if r is not None:  # ensure that an empty reading is actually None
             return True
-        return False
+        else:
+            warnings.warn("empty response when testing api for station {self.id}")
+            return False
     
     # override as necessary for sub-classes
     def _format_time(self, dt:datetime)->str:
@@ -217,7 +220,7 @@ class DavisStation(WeatherStation):
         warnings("not implemented")
         return True
     
-    def _get_reading(self):
+    def _get_readings(self):
         warnings("not implemented")
         return self.empty_response
 
@@ -235,7 +238,7 @@ class RainwiseStation(WeatherStation):
         warnings("not implemented")
         return True
     
-    def _get_reading(self):
+    def _get_readings(self):
         warnings("not implemented")
         return self.empty_response
     
@@ -251,7 +254,7 @@ class SpectrumStation(WeatherStation):
     def _check_config(self):
         return True
     
-    def _get_reading(self):
+    def _get_readings(self):
         warnings("not implemented")
         return self.empty_response
 
@@ -269,7 +272,7 @@ class ZentraStation(WeatherStation):
         warnings("not implemented")
         return True
     
-    def _get_reading(self, params):
+    def _get_readings(self, params):
         warnings.warn("not implemented")
         return self.empty_response
     
