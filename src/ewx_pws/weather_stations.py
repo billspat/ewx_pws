@@ -15,7 +15,7 @@ from pydantic import BaseModel, Field
 from typing import Literal
 
 # package local
-from .time_intervals import previous_fourteen_minute_period, previous_fifteen_minute_period, fifteen_minute_mark
+from ewx_pws.time_intervals import previous_fourteen_minute_period, previous_fifteen_minute_period, fifteen_minute_mark
 
 
 #############
@@ -61,6 +61,7 @@ class WeatherStation(ABC):
     # used by subclasses as default when there is no data from station
     empty_response = ['{}']
     
+    ####### constructor #########
     def __init__(self, config:GenericConfig):
         """create station object using Config data model """    
         self.config = config
@@ -69,7 +70,7 @@ class WeatherStation(ABC):
         self.current_api_request = None
         self.current_api_response = None
         
-    #### class methods
+    ####### alternative constructors as class methods #########
     @classmethod
     def init_from_dict(cls, config:dict):
         """ accept a dictionary to create this class, rather than the config Type class"""
@@ -131,6 +132,15 @@ class WeatherStation(ABC):
         print(f" this would be a reading from {self.id} for {params.get('start_datetime')} to {params.get('end_datetime')}")
         return "{}"
     
+    # override as necessary for sub-classes
+    def _format_time(self, dt:datetime)->str:
+        """
+        ensure correctr formating of a date/time parameter for API request, convert to 
+        UTC or local as needed.  The generic converter simply converts to 
+        """
+        return(dt.strftime('%Y-%m-%d %H:%M:%S'))
+    
+    
     # user api method that has optional start & end times
     def get_readings(self,start_datetime_str = None, end_datetime_str = None):
         """prepare start/end times and other params generically and then call station-specific method with that.  
@@ -142,19 +152,22 @@ class WeatherStation(ABC):
             # no start ?  Use the interval 15 minutees before present time.  see module for details.  Ignore end time if it's sent
             start_datetime,end_datetime =  previous_fourteen_minute_period()
         else:
+            # TODO use pendulum package to accept wider variety of date/time str formats
             start_datetime = datetime.fromisoformat(start_datetime_str)
             if not end_datetime_str:
-                # no end time, make end time 15 minutes from stard time given.  
-                end_datetime = start_datetime + timedelta(minutes= 15)
+                # no end time, make end time 14 minutes from stard time given.  
+                end_datetime = start_datetime + timedelta(minutes= 14)
             else:
                 end_datetime = datetime.fromisoformat(end_datetime_str)
-
-        params = self.config.dict()
-        params['start_datetime'] = self._format_time(start_datetime)
-        params['end_datetime'] = self._format_time(end_datetime)
         
+        #TODO: !!! ensure all datetimes are UTC.  perhaps that could all be in the _format_time() method
+
         try:
-            self.current_api_response = self._get_readings(params)
+            self.current_api_response = self._get_readings(
+                start_datetime_str = self._format_time(start_datetime),
+                end_datetime_str = self._format_time(end_datetime)
+            )
+
         except Exception as e:
             print("Error getting reading from station {self.id}: {e}")
             raise e        
@@ -194,12 +207,7 @@ class WeatherStation(ABC):
             warnings.warn("empty response when testing api for station {self.id}")
             return False
     
-    # override as necessary for sub-classes
-    def _format_time(self, dt:datetime)->str:
-        """
-        proper formating for API request
-        """
-        return(dt.strftime('%Y-%m-%d %H:%M:%S'))
+
 
 
 
