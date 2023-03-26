@@ -59,8 +59,8 @@ class OnsetStation(WeatherStation):
                           headers={
                               'Content-Type': 'application/x-www-form-urlencoded'},
                           data={'grant_type': 'client_credentials',
-                                'client_id': self.config['client_id'],
-                                'client_secret': self.config['client_secret']
+                                'client_id': self.config.client_id,
+                                'client_secret': self.config.client_secret
                                 }
                           ).prepare()
         resp = Session().send(request)
@@ -71,27 +71,29 @@ class OnsetStation(WeatherStation):
         response = resp.json()
         # store this in the object
         self.access_token = response['access_token']
-        return response['access_token']
+        return self.access_token
  
-    def _get_readings(self,params):
+    def _get_readings(self,start_datetime_str:str,end_datetime_str:str):
         # params are start time, end time, and other req specific params
-        # assume start_datetime are in UTC for this request
-        start_datetime_str = self.__format_time(params['start_datetime'])
-        end_datetime_str = self.__format_time(params['end_datetime'])
+        # assume start_datetime are in UTC for this request and already formatted
+        # start_datetime_str = self._format_time(params['start_datetime'])
+        # end_datetime_str = self._format_time(params['end_datetime'])
         access_token = self._get_auth()
         
         self.current_api_request = Request('GET',
             url=f"https://webservice.hobolink.com/ws/data/file/{self.config.ret_form}/user/{self.config.user_id}",
             headers={
                 'Authorization': "Bearer " + access_token},
-            params={'loggers': sn,
+            params={'loggers': self.config.sn,
                 'start_date_time': start_datetime_str,
-                'end_date_time': end_datetime_str}).prepare()
+                'end_date_time': start_datetime_str}).prepare()
         
         api_response = Session().send(self.current_api_request)
         return(api_response)
         
-    # def _handle_error(self):
+    def _handle_error(self):
+        """ place holder to remind that we need to add err handling to each class"""
+        pass
     #     resp = self.current_api_response
     #     if not resp: 
     #         return self.empty_response
