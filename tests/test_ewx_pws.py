@@ -1,24 +1,12 @@
 #!/usr/bin/env python
 
 """Tests for `ewx_pwx` package."""
-
 import pytest, random, string,  os
 from tempfile import NamedTemporaryFile
-from dotenv import load_dotenv
-load_dotenv()
 
-
+# dotenv loaded in conftest.py
 
 from ewx_pws import ewx_pws
-
-
-@pytest.fixture
-def random_string():
-    """pytest fixture returns a string"""
-
-    length = 10
-    letters = string.ascii_lowercase
-    return(''.join(random.choice(letters) for i in range(length)))
 
 
 @pytest.fixture
@@ -36,16 +24,7 @@ def sample_fixture_response():
     import requests
     return requests.get('https://github.com/')
 
-@pytest.fixture
-def fake_stations_list():
-    """this is fake data and won't connect to any real station API.  The API keys look real but are made up"""
-    
-    return [
-        ['fake_zentra','ZENTRA','{"sn":"z1-1234","token":"d5b8f6391ac38bad6f0b51d7a718b9e3e31eec81","tz":"ET"}'],
-        ['fake_davis','DAVIS','{"sn":"123456","apikey":"gtqdcbirudd1sarq6esbvorfj6tw67ao","apisec":"0286g8zxfvr77yhdx3pcwnnqqstdwqel","tz":"ET"}'],
-        ['fake_spectrum','SPECTRUM','{"sn":"12345678","apikey":"c3a2f80786398e656b08677b7a511a59","tz":"ET"}']
-    ]
-    
+
 @pytest.fixture
 def fake_stations_file(fake_stations_list):
 
