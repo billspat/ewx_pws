@@ -4,14 +4,15 @@
 # from time_intervals import previous_fifteen_minute_period
 # from multiweatherapi import multiweatherapi
 
-import requests
+import requests, pytz, json, warnings
 from datetime import datetime, timedelta, timezone
+# from pytz import timezone
 from requests import Session, Request
 
 # typing and Pydantic 
 from abc import ABC, abstractmethod
 from pydantic import BaseModel, Field
-from typing import Literal, Type
+from typing import Literal
 
 # package local
 from .time_intervals import previous_fourteen_minute_period, previous_fifteen_minute_period, fifteen_minute_mark
@@ -34,30 +35,77 @@ STATION_TYPE = Literal['ZENTRA', 'ONSET', 'DAVIS', 'RAINWISE', 'SPECTRUM', 'GENE
 # WeatherStationConfig = dict
 
 class WeatherStationConfig(BaseModel):
-    station_id : str = None
+    """Basis for all station configuration types, includes common meta-data config common to all station types. 
+    Station-specifc config """
+    station_id : str 
     station_type : STATION_TYPE = "GENERIC"
     tz : str = "ET" # Field(description="time zone where the station is located")  # TODO create a timezone literal type
     
-    
+
+class GenericConfig(WeatherStationConfig):
+    """This configuration is used for testing, dev and for base class.  Station specific config is simply stored
+    in a dictionary"""
+    config:dict = {}
+
+
 #############################
 # BASE CLASS
 class WeatherStation(ABC):
-    """configuration and information for a weather station and it's API"""
+    """configuration for a weather station to access it's API and retrieve data"""
 
+    # class globals
+    tzlist = {
+            'HT': 'US/Hawaii',
+            'AT': 'US/Alaska',
+            'PT': 'US/Pacific',
+            'MT': 'US/Mountain',
+            'CT': 'US/Central',
+            'ET': 'US/Eastern'
+        }
+    
+    # used by subclasses as default when there is no data from station
+    empty_response = ['{}']
+    
+    #### class methods
     @classmethod
     def init_from_dict(cls, config:dict):
-        """ accept a dictionary to create this class, rather than the Type class"""
+        """ accept a dictionary to create this class, rather than the config Type class"""
     
         # this will raise error if config dictionary is not correct
-        station_config = WeatherStationConfig.parse_obj(config)
+        station_config = GenericConfig.parse_obj(config)
         return(cls(station_config))
-    
-    
-    def __init__(self, config:WeatherStationConfig):#### this won't work to have the 'config' fields of other classes be strong types!  
+
+    @classmethod
+    def init_from_list(cls, station_config: list):
+        """create station object using config stored as a list, by converting to dict and invoking 
+        the other clas method. see GenericConfig type model above
+        
+        accept a list with the following elements in order:
+        station_id; station_type, config as json str, optionally include time zone
+        (in future time zone should be pulled out of this dict)
+        returns: object instance using GenericConfig type
+        
+        """
+        config_dict = json.loads(station_config[2])
+        
+        # TODO : update this if the proposed record format is updated to include a tz field
+        if 'tz' in config_dict.keys():
+            tz = config_dict['tz']
+        else:
+            tz = 'ET'
+        # create a dictionary from list... and call the class method above  
+        station_config_dict = {
+            'station_id': station_config[0],
+            'station_type': station_config[1],
+            'tz': tz,
+            'config': config_dict
+        }
+        cls.init_from_dict(station_config_dict)
+        
+    def __init__(self, config:GenericConfig):
+        """create station object using Config data model """    
         self.config = config
-        # pull out some of the elements in the dict
         self._id = config.station_id
-        self.current_reading = None
         
     # convenience/hiding methods
     @property
@@ -66,11 +114,11 @@ class WeatherStation(ABC):
     
     @property
     def station_type(self):
-        return(self.config['station_type'] )
+        return(self.config.station_type)
     
     @property
     def station_tz(self):
-        return(self.config['tz'])
+        return(self.config.tz)
     
     ##### abstract methods to be overriden
     
@@ -86,11 +134,11 @@ class WeatherStation(ABC):
         return "{}"
     
     # user api method that has optional start & end times
-    def get_reading(self,start_datetime_str = None, end_datetime_str = None):
+    def get_readings(self,start_datetime_str = None, end_datetime_str = None):
         """prepare start/end times and other params generically and then call station-specific method with that.  
         This should always be wrapped in a try/except block"""
         
-        request_time = datetime.now(tz='UTC')
+        request_time = datetime.now(tz=timezone.utc)
         
         if not start_datetime_str:
             # no start ?  Use the interval 15 minutees before present time.  see module for details.  Ignore end time if it's sent
@@ -103,7 +151,7 @@ class WeatherStation(ABC):
             else:
                 end_datetime = datetime.fromisoformat(end_datetime_str)
 
-        params = self.station_config
+        params = self.config.dict()
         params['start_datetime'] = self._format_time(start_datetime)
         params['end_datetime'] = self._format_time(end_datetime)
         
@@ -116,20 +164,21 @@ class WeatherStation(ABC):
         
         # add meta data
         reading_metadata = {
-            "station_type": "onset",
+            "station_type": self.config.station_type,
             "station_id": self.id,
-            "timezone": self.config['tz'],
+            "timezone": self.config.tz, 
             "start_datetime": start_datetime,
             "end_datetime": end_datetime,
             "request_time": request_time,
-            "package_version": self.debug_info['binding_ver']}
+            "package_version": '0'
+        }
         
+        response.append(reading_metadata)
         
-        self.response.append(metadata)
-        # # includes mwapi_resp.resp_raw, and mwapi_resp.resp_transformed
-        # self.current_reading = mwapi_resp
+        # save for later
+        self.current_reading = response
         
-        # return mwapi_resp
+        return response
 
     def get_test_reading(self):
         """ test that current config is working and station is online
@@ -148,12 +197,11 @@ class WeatherStation(ABC):
         return False
     
     # override as necessary for sub-classes
-    def _format_time(self, dt:datetime):
+    def _format_time(self, dt:datetime)->str:
         """
-        This method makes sure that a datetime object is in the format "YYYY-MM-DD HH:MM:SS".
+        proper formating for API request
         """
         return(dt.strftime('%Y-%m-%d %H:%M:%S'))
-    
 
 # ONSET ###################
 
@@ -166,11 +214,11 @@ class OnsetConfig(WeatherStationConfig):
     client_secret : str = Field(description="client specific value provided by Onset")
     ret_form : str = Field(description="The format data should be returned in. Currently only JSON is supported.")
     user_id : str = Field(description="alphanumeric ID of the user account This can be pulled from the HOBOlink URL: www.hobolink.com/users/<user_id>")
-    sensor_sn : dict = Field(description="a dict of sensor serial numbers")
-    access_token = Field('', description="needed for api auth, filled in by auth request ")
+    sensor_sn : dict[str,str] = Field(description="a dict of sensor alphanumeric serial numbers keyed on sensor type, e.g. {'atemp':'21079936-1'}") 
+    access_token : str = Field('', description="needed for api auth, filled in by auth request ")
     
     # conversion_msg : str # Stores time conversion message
-    
+    # TODO class OnsetSensor() of elements in sensor_sn
     
 class OnsetStation(WeatherStation):
     """ config is OnsetConfig type """
@@ -226,15 +274,17 @@ class ZentraConfig(WeatherStationConfig):
     station_type : STATION_TYPE = "ZENTRA"
     
 class ZentraStation(WeatherStation):
-    """Zentra Brand Weather Station"""    
+    """Access the MeterGroup weather api for Zentra type Weather Stations"""    
     def __init__(self,config:ZentraConfig):
         super().__init__(config)
         
     def _check_config(self):
+        warnings("not implemented")
         return True
     
     def _get_reading(self):
-        return('{}')
+        warnings.warn("not implemented")
+        return self.empty_response
         
 
 class DavisConfig(WeatherStationConfig):
@@ -246,10 +296,12 @@ class DavisStation(WeatherStation):
         super().__init__(config)
     
     def _check_config(self):
+        warnings("not implemented")
         return True
     
     def _get_reading(self):
-        return('{}')
+        warnings("not implemented")
+        return self.empty_response
 
 class RainwiseConfig(WeatherStationConfig):
     station_type : STATION_TYPE = "RAINWISE"
@@ -260,10 +312,12 @@ class RainwiseStation(WeatherStation):
         super().__init__(config)
 
     def _check_config(self):
+        warnings("not implemented")
         return True
     
     def _get_reading(self):
-        return('{}')
+        warnings("not implemented")
+        return self.empty_response
     
 class SpectrumConfig(WeatherStationConfig):
     station_type : STATION_TYPE = "SPECTRUM"
@@ -277,9 +331,13 @@ class SpectrumStation(WeatherStation):
         return True
     
     def _get_reading(self):
-        return('{}')
+        warnings("not implemented")
+        return self.empty_response
 
-# METHODS UTILIZING CLASS
+
+
+# METHODS UTILIZING CLASS : 
+# TODO: move these to a parent module if/when splitting the station types to their own modules to prevent circular imports
 
 # module var:  dictionary of station types and classes
 # update this when adding new types        

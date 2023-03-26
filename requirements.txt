@@ -4,6 +4,8 @@ pip==19.2.3
 Sphinx==1.8.5
 
 pytest==6.2.4
+pytz
+pydantic
 
 # bump2version==0.5.11
 # wheel==0.33.6
