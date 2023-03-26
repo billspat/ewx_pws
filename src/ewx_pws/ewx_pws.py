@@ -6,12 +6,17 @@ from datetime import datetime, timedelta
 from multiweatherapi import multiweatherapi
 from dotenv import load_dotenv
 
+from ewx_pws.weather_stations import WeatherStation, STATION_TYPE
+from ewx_pws.weather_stations import ZentraStation, DavisStation, RainwiseStation, SpectrumStation
+from ewx_pws.onset import OnsetStation
+
 
 from ewx_pws.time_intervals import previous_fifteen_minute_period
 
 load_dotenv()
 
 ### CONSTANTS
+
 STATION_TYPES = ['DAVIS', 'CAMPBELL', 'ONSET', 'RAINWISE', 'SPECTRUM', 'ZENTRA']
 
 def get_reading(station_type, station_config,
@@ -136,6 +141,49 @@ def stations_from_file(csv_file_path:str):
             stations[station_id] = row
     
     return stations    
+
+
+#### using WeatherStation classes
+# METHODS UTILIZING CLASS : 
+
+# module var:  dictionary of station types and classes
+# update this when adding new types        
+
+
+_station_types = {'zentra': ZentraStation, 'onset': OnsetStation, 'davis': DavisStation,'rainwise': RainwiseStation, 'spectrum':SpectrumStation }
+
+def weather_station_factory(station_type:STATION_TYPE, config:dict) -> type[WeatherStation]:
+    """" create a station or raise an exception if can't create the station because of bad configuration"""
+    try:
+        station = _station_types[station_type](config)
+    except Exception as e: 
+        print(f"could not create station type {station_type} from config: {e}")
+        raise e
+    
+    return station 
+
+
+def validate_station_config(station_type:STATION_TYPE, station_config:dict)->bool:
+    """  this tests the station configuration as correct by 1) attempting to create the station object 2) get a sample reading
+    
+    returns T or F only """
+    
+    # attempt to create the station and see what happens, return F if it doesn't work
+    try:
+        test_station = weather_station_factory(station_type, station_config)
+    except Exception as e:
+        print("station config error for {station_type}")
+        return False    
+    
+    # attempt to get a sample reading and see what happens, return T if it works
+    try:
+        r = test_station.get_test_reading()
+        if r:
+            return True
+    except Exception as e:
+        print("could not get reading for station type {station_type} id {station.id}: {e}")
+        return False
+    # false here ==> config is incorrect OR station is offline, don't know which
 
 ## random python notes 
 # to convert the dictionary of stations into a simple list

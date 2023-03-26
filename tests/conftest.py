@@ -64,10 +64,10 @@ def real_station_configs(station_list_from_env):
     station_configs = [{'id':'TEST_GENERIC', 'station_type': 'generic', 'config': '{"tz":"ET"}'}]
     
     for fs in station_list_from_env:
-        fake_config = json.loads(fs[2])
+        station_config = json.loads(fs[2])
         station_type = fs[1]
         station_id = fs[0]
-        fake_config.update({'id': station_id, 'station_type': station_type})
-        fake_configs.append(fake_config)
+        station_config.update({'id': station_id, 'station_type': station_type})
+        station_configs.append(station_config)
     
-    return fake_configs
+    return station_configs
