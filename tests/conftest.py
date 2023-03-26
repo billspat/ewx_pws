@@ -46,28 +46,33 @@ def fake_station_configs(fake_stations_list):
 
 
 @pytest.fixture
-def station_list_from_env():
+def station_dict_from_env():
+    """build a dictionary of stations from os environemt, each in generic config format"""
     stations_available  = [s for s in STATION_TYPES if s.upper() in  environ.keys()]
     stations = {}
     for station_name in stations_available:
         stations[station_name] = {
             "station_id"     : f"test_{station_name}",
             "station_type"   : station_name,
-            "station_config" : json.loads(environ[station_name])
+            "config" : json.loads(environ[station_name])
         }
         
     return stations
 
 @pytest.fixture
-def real_station_configs(station_list_from_env):
+def station_configs(station_dict_from_env):
     """using the env entries data above, reform into dictionaries of config"""
-    station_configs = [{'id':'TEST_GENERIC', 'station_type': 'generic', 'config': '{"tz":"ET"}'}]
+    # add generic to .env station_configs = [{'id':'TEST_GENERIC', 'station_type': 'generic', 'config': '{"tz":"ET"}'}]
+    # the env are dict as json str , the method above converts to dict, with 'config' sub-dict
+    # move 'config' sub-dict up a level for Config models
+    configs = {}
+    for station_type in station_dict_from_env:
+        generic_config = station_dict_from_env[station_type]
+        # add all fields in sub-dict to top level
+        generic_config.update(generic_config['config'])
+        # remove 'config' element no longer needed for specific config
+        generic_config['config'] = None
+        # add to our dict of all configs
+        configs[station_type]  = generic_config 
     
-    for fs in station_list_from_env:
-        station_config = json.loads(fs[2])
-        station_type = fs[1]
-        station_id = fs[0]
-        station_config.update({'id': station_id, 'station_type': station_type})
-        station_configs.append(station_config)
-    
-    return station_configs
+    return configs
