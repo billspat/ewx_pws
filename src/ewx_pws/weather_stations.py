@@ -1,7 +1,6 @@
 # """WIP start on a class to hold this info, 
 # not sure if a class is warranted for this yet - why would we need to preseve state?me"""
 
-# from time_intervals import previous_fifteen_minute_period
 # from multiweatherapi import multiweatherapi
 
 import requests, pytz, json, warnings
@@ -68,7 +67,7 @@ class WeatherStation(ABC):
         self._id = config.station_id
         # store req/resp in object for debugging
         self.current_api_request = None
-        self.current_api_response = None
+        self.current_response = None
         
     ####### alternative constructors as class methods #########
     @classmethod
@@ -140,14 +139,32 @@ class WeatherStation(ABC):
         """
         return(dt.strftime('%Y-%m-%d %H:%M:%S'))
     
-    
+    # this is a separate method so that it may be overriden if necessary by sub-classes
+    def _format_response(self, api_response, start_datetime_str, end_datetime_str, request_time):
+        """ modify format of response for consistency and to add meta data.  """
+         # TODO: add meta data to response so it can be identified for future diagnostics
+        reading_metadata = {
+            "station_type": self.config.station_type,
+            "station_id": self.id,
+            "timezone": self.config.tz, 
+            "start_datetime": start_datetime_str,
+            "end_datetime": end_datetime_str,
+            "request_time": request_time,
+            "package_version": '0.1'
+        }
+        
+        return [reading_metadata].append(api_response)
+        
     # user api method that has optional start & end times
     def get_readings(self,start_datetime_str = None, end_datetime_str = None):
-        """prepare start/end times and other params generically and then call station-specific method with that.  
-        This should always be wrapped in a try/except block"""
-        
+        """prepare start/end times and other params generically and then call station-specific method with that.
+        start_datetime_str: optional date time interpretable string in UTC time zone
+        end_datetime_str: optional datetime interpretable string in UTC time zone.  If start_datetime_str is empty this is ignored 
+        """
+        # for meta-data
         request_time = datetime.now(tz=timezone.utc)
         
+        # the time delta in this method is abritrary but fits with the proposed data pipeline
         if not start_datetime_str:
             # no start ?  Use the interval 15 minutees before present time.  see module for details.  Ignore end time if it's sent
             start_datetime,end_datetime =  previous_fourteen_minute_period()
@@ -155,39 +172,35 @@ class WeatherStation(ABC):
             # TODO use pendulum package to accept wider variety of date/time str formats
             start_datetime = datetime.fromisoformat(start_datetime_str)
             if not end_datetime_str:
-                # no end time, make end time 14 minutes from stard time given.  
+                # no end time, make end time 14 minutes from start time given.  
                 end_datetime = start_datetime + timedelta(minutes= 14)
             else:
                 end_datetime = datetime.fromisoformat(end_datetime_str)
         
         #TODO: !!! ensure all datetimes are UTC.  perhaps that could all be in the _format_time() method
 
+        # TODO : some of these will return a list and not a single response due to how the APIs work. Hence we need 
+        # a flexible way to accept that and still be able to pull the content out.   create "content" abstract method?
         try:
-            self.current_api_response = self._get_readings(
-                start_datetime_str = self._format_time(start_datetime),
-                end_datetime_str = self._format_time(end_datetime)
+            self.current_response = self._get_readings(
+                start_datetime,
+                end_datetime
             )
 
         except Exception as e:
             print("Error getting reading from station {self.id}: {e}")
             raise e        
-        
-        # # add meta data
-        # reading_metadata = {
-        #     "station_type": self.config.station_type,
-        #     "station_id": self.id,
-        #     "timezone": self.config.tz, 
-        #     "start_datetime": start_datetime,
-        #     "end_datetime": end_datetime,
-        #     "request_time": request_time,
-        #     "package_version": '0'
-        # }
-        
-        # response.append(reading_metadata)
-        
-        
-        return self.current_api_response
+    
+        # TODO add meta data in consistent way to response data for diagnostics    
+        response_data = json.loads(self.current_response.content)
 
+
+        # this is saved as a class attribute but returned for other processing 
+        return response_data
+
+    def current_response_data(self):
+        json.loads(self.current_response._content)
+        
     def get_test_reading(self):
         """ test that current config is working and station is online
         returns:

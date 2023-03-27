@@ -1,17 +1,16 @@
 import pytest, random, string, json
 
 from os import environ
-from tempfile import NamedTemporaryFile
+# from tempfile import NamedTemporaryFile
 from dotenv import load_dotenv
 load_dotenv()
 from ewx_pws.ewx_pws import STATION_TYPES
-from ewx_pws.weather_stations import STATION_TYPE
+# from ewx_pws.weather_stations import STATION_TYPE
 
 
 @pytest.fixture
 def random_string():
     """pytest fixture returns a string"""
-
     length = 10
     letters = string.ascii_lowercase
     return(''.join(random.choice(letters) for i in range(length)))
@@ -67,12 +66,12 @@ def station_configs(station_dict_from_env):
     # move 'config' sub-dict up a level for Config models
     configs = {}
     for station_type in station_dict_from_env:
-        generic_config = station_dict_from_env[station_type]
-        # add all fields in sub-dict to top level
-        generic_config.update(generic_config['config'])
+        s_config = station_dict_from_env[station_type]
+        # move all fields in sub-dict to top level so we can create a config object
+        s_config.update(s_config['config'])
         # remove 'config' element no longer needed for specific config
-        generic_config['config'] = None
+        s_config['config'] = None
         # add to our dict of all configs
-        configs[station_type]  = generic_config 
+        configs[station_type]  = s_config 
     
     return configs

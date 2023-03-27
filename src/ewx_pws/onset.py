@@ -6,6 +6,21 @@ from datetime import datetime, timezone
 
 from pydantic import Field
 from ewx_pws.weather_stations import WeatherStationConfig, WeatherStation
+from ewx_pws.time_intervals import fifteen_minute_mark, previous_fifteen_minute_period
+
+
+### Onset Notes
+
+# response.content  format
+
+    # {
+    # "max_results": true,
+    # "message": "",
+    # "observation_list": []
+    # }
+    
+    # message example: "message":"OK: Found: 0 results."
+    # "message":"OK: Found: 21 results."
 
 class OnsetConfig(WeatherStationConfig):
     station_id : str = None
@@ -73,41 +88,41 @@ class OnsetStation(WeatherStation):
         self.access_token = response['access_token']
         return self.access_token
  
-    def _get_readings(self,start_datetime_str:str,end_datetime_str:str):
-        # params are start time, end time, and other req specific params
-        # assume start_datetime are in UTC for this request and already formatted
-        # start_datetime_str = self._format_time(params['start_datetime'])
-        # end_datetime_str = self._format_time(params['end_datetime'])
-        access_token = self._get_auth()
+    def _format_time(self, dt:datetime)->str:
+        """
+        format date/time parameter for Onset API request
+        """
+        return(dt.strftime('%Y-%m-%d %H:%M:%S'))
+    
+
+    def _get_readings(self,start_datetime:datetime,end_datetime:datetime)->list:
+        """ use Onset API to pull data from this station for times between start and end.  Called by the parent 
+        class method get_readings().   
         
+        parameters:
+        start_datetime: datetime object in UTC timezone.  Does not have to have a timezone but must be UTC
+        end_datetime: datetime object in UTC timezone.  Does not have to have a timezone but must be UTC
+        """
+            
+        access_token = self._get_auth() 
+        
+        start_datetime_str = self._format_time(start_datetime)
+        end_datetime_str = self._format_time(end_datetime)
+            
         self.current_api_request = Request('GET',
-            url=f"https://webservice.hobolink.com/ws/data/file/{self.config.ret_form}/user/{self.config.user_id}",
-            headers={
-                'Authorization': "Bearer " + access_token},
-            params={'loggers': self.config.sn,
-                'start_date_time': start_datetime_str,
-                'end_date_time': start_datetime_str}).prepare()
+                url=f"https://webservice.hobolink.com/ws/data/file/{self.config.ret_form}/user/{self.config.user_id}",
+                headers={'Authorization': "Bearer " + access_token},
+                params={'loggers': self.config.sn,
+                    'start_date_time': start_datetime_str,
+                    'end_date_time': start_datetime_str}).prepare()
         
         api_response = Session().send(self.current_api_request)
+        
+        ## prepare response as a list.   All responses are to be wrapped in a list as some APIs require multiple requests
+        
         return(api_response)
         
     def _handle_error(self):
         """ place holder to remind that we need to add err handling to each class"""
         pass
-    #     resp = self.current_api_response
-    #     if not resp: 
-    #         return self.empty_response
-        
-    #     if resp.status_code != 200:
-    #         self.response[0]['status_code'] = resp.status_code
-    #         self.response[0]['error_msg'] = json.loads(resp.text),'Message') # utilities.case_insensitive_key
-    #     elif str(resp.content) == str(b'{"Error": "Device serial number entered does not exist"}'):
-    #         self.response[0]['status_code'] = resp.status_code
-    #         self.response[0]['error_msg'] = utilities.case_insensitive_key(json.loads(resp.text),'Message')
-    #     elif 'Found: 0 results' in resp.text:
-    #         self.response[0] = {'status_code' : 404, 'error_msg' : 'Not found'}
-    #     else:
-    #         self.response[0]['status_code'] = resp.status_code
 
-    #     self.response.append(resp.json())
-    #     return "{}"

@@ -1,5 +1,6 @@
 from ewx_pws.onset import OnsetConfig, OnsetStation, WeatherStationConfig, WeatherStation
 import pytest, re
+from pprint import pprint
 
 # note: fixtures auto-imported from conftest.py
 @pytest.fixture
@@ -31,19 +32,40 @@ def test_onset_auth(test_onset_station):
     assert len(token) > 2
     token_pattern = re.compile('[0-9a-z]+')
     assert re.fullmatch(token_pattern,test_onset_station.access_token)
+      
+def test_onset_readings(test_onset_station):
     
-def test_onset_json_reading(test_onset_station):
-    # get for current date/time
-    readings = test_onset_station.get_readings()
-    
-    assert readings is not None
-    assert test_onset_station.current_api_response is not None
-    assert test_onset_station.current_api_response.status_code == 200
-    
-    from pprint import pprint
-    pprint(vars(test_onset_station.current_api_response))
+    # note as of 2023-03-26 the test best onset station is offline
+    # use hard-coded date/time when it was on line for this test
+    # TODO remove these when the station is back on-line
+    sdt="2022-12-01 19:00:00"
+    edt="2022-12-01 19:15:00"  
+
+    # test with hard-coded time
+    readings = test_onset_station.get_readings(start_datetime_str=sdt,end_datetime_str=edt)
+
+    # optional, print outputs for debug
+    # use pytest -s to see this output
+    pprint(vars(test_onset_station.current_response))
     print('-----')
-    pprint(test_onset_station.current_api_response._content)
+    pprint(test_onset_station.current_response.content)
+        
+    assert test_onset_station.current_response is not None
+    assert test_onset_station.current_response.status_code == 200
+    assert readings is not None
+    
+    onset_observation_list = readings['observation_list']
+    assert len(onset_observation_list) > 0
+    onset_message = readings['message']
+    assert onset_message != 'OK: Found: 0 results.'
+    print(onset_message)
+    
+    
+
+    
+    
+    
+
 
 
 
