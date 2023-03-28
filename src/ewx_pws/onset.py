@@ -23,7 +23,7 @@ from ewx_pws.time_intervals import fifteen_minute_mark, previous_fifteen_minute_
     # "message":"OK: Found: 21 results."
 
 class OnsetConfig(WeatherStationConfig):
-    station_id : str = None
+    station_id : str
     station_type : STATION_TYPE  = 'ONSET'
     sn : str  = Field(description="The serial number of the device")
     client_id : str = Field(description="client specific value provided by Onset")
