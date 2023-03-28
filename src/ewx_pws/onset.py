@@ -6,7 +6,6 @@ from datetime import datetime, timezone
 
 from pydantic import Field
 from ewx_pws.weather_stations import WeatherStationConfig, WeatherStation, STATION_TYPE
-from ewx_pws.time_intervals import fifteen_minute_mark, previous_fifteen_minute_period
 
 
 ### Onset Notes
