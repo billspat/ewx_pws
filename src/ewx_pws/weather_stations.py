@@ -161,6 +161,10 @@ class WeatherStation(ABC):
         start_datetime_str: optional date time interpretable string in UTC time zone
         end_datetime_str: optional datetime interpretable string in UTC time zone.  If start_datetime_str is empty this is ignored 
         """
+        
+        #TODO: !!! ensure all datetimes are UTC.  if we allow 'str' inputs for date time, can't enforce that
+        # create a request_interval pydantic type that requires a datetime object with a timezone, and that timezone must be UTC
+        
         # for meta-data
         request_time = datetime.now(tz=timezone.utc)
         
@@ -177,7 +181,6 @@ class WeatherStation(ABC):
             else:
                 end_datetime = datetime.fromisoformat(end_datetime_str)
         
-        #TODO: !!! ensure all datetimes are UTC.  perhaps that could all be in the _format_time() method
 
         # TODO : some of these will return a list and not a single response due to how the APIs work. Hence we need 
         # a flexible way to accept that and still be able to pull the content out.   create "content" abstract method?
@@ -263,21 +266,7 @@ class RainwiseStation(WeatherStation):
         warnings("not implemented")
         return self.empty_response
     
-########## SPECTRUM ############
-class SpectrumConfig(WeatherStationConfig):
-    station_type : STATION_TYPE = "SPECTRUM"
 
-class SpectrumStation(WeatherStation):
-    def __init__(self,config:WeatherStationConfig):
-        self.station_type = 'spectrum'
-        super().__init__(config)  
-        
-    def _check_config(self):
-        return True
-    
-    def _get_readings(self):
-        warnings("not implemented")
-        return self.empty_response
 
 
 ########## ZENTRA ############
