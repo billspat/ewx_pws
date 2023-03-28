@@ -7,9 +7,10 @@ from multiweatherapi import multiweatherapi
 from dotenv import load_dotenv
 
 from ewx_pws.weather_stations import WeatherStation, STATION_TYPE
-from ewx_pws.weather_stations import ZentraStation, DavisStation, RainwiseStation
+from ewx_pws.weather_stations import DavisStation, RainwiseStation
 from ewx_pws.spectrum import SpectrumStation
 from ewx_pws.onset import OnsetStation
+from ewx_pws.zentra import ZentraStation
 
 
 from ewx_pws.time_intervals import previous_fifteen_minute_period

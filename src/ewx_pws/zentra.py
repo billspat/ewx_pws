@@ -39,7 +39,8 @@ class ZentraStation(WeatherStation):
         # TODO implement 
         return(True)
 
-    def _get_readings(self, interval:int = 1, start_datetime:datetime = None, end_datetime:datetime = None):
+    def _get_readings(self, start_datetime:datetime, end_datetime:datetime, 
+                      interval:int = 1):
         """
         Params are start time, end time, and interval.
         Returns raw api response.
