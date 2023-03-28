@@ -1,11 +1,6 @@
-from ewx_pws.weather_stations import  WeatherStationConfig, WeatherStation,ZentraConfig, ZentraStation
+from ewx_pws.weather_stations import  WeatherStationConfig, WeatherStation
 
 import pytest, json 
-
-# @pytest.fixture
-# def fake_onset_config():
-#     pass
-
 
 @pytest.fixture
 def fake_station_class():
