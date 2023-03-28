@@ -116,9 +116,7 @@ class OnsetStation(WeatherStation):
                     'end_date_time': start_datetime_str}).prepare()
         
         api_response = Session().send(self.current_api_request)
-        
-        ## prepare response as a list.   All responses are to be wrapped in a list as some APIs require multiple requests
-        
+
         return(api_response)
         
     def _handle_error(self):
