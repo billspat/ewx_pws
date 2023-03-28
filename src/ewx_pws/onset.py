@@ -5,7 +5,7 @@ from requests import Session, Request
 from datetime import datetime, timezone
 
 from pydantic import Field
-from ewx_pws.weather_stations import WeatherStationConfig, WeatherStation
+from ewx_pws.weather_stations import WeatherStationConfig, WeatherStation, STATION_TYPE
 from ewx_pws.time_intervals import fifteen_minute_mark, previous_fifteen_minute_period
 
 
@@ -24,7 +24,7 @@ from ewx_pws.time_intervals import fifteen_minute_mark, previous_fifteen_minute_
 
 class OnsetConfig(WeatherStationConfig):
     station_id : str = None
-    station_type : str = 'ONSET'
+    station_type : STATION_TYPE  = 'ONSET'
     sn : str  = Field(description="The serial number of the device")
     client_id : str = Field(description="client specific value provided by Onset")
     client_secret : str = Field(description="client specific value provided by Onset")
@@ -46,7 +46,7 @@ class OnsetStation(WeatherStation):
         # this will raise error if config dictionary is not correct
         station_config = OnsetConfig.parse_obj(config)
         return(cls(station_config))
-
+        
     def __init__(self,config: OnsetConfig):
         """ create class from config Type"""
         self.access_token = None
