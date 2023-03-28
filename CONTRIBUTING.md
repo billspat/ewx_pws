@@ -82,9 +82,19 @@ From the top directory, run
 `pytest tests/`
 
 
-## building
+## Building
 
-TBD
+To build a wheel for ewx_pws, navigate to the top of the directory. Using `poetry` either use
+1. Build both a wheel and a tarball without the format option
+    ```console
+    $ poetry build
+    ```
+    or
+2. Build a wheel only using
+    ```console
+    $ poetry build --format=wheel
+    ```
+The output will appear in the `/dist` subdirectory.
 
 ## building documentation
 
