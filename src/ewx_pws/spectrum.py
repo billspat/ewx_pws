@@ -45,7 +45,7 @@ class SpectrumStation(WeatherStation):
         # otherwise assume it's UTC. 
         return(dt.strftime('%m-%d-%Y %H:%M'))
     
-    def _get_readings(self,start_datetime, end_datetime):
+    def _get_readings(self,start_datetime:datetime, end_datetime:datetime):
         """ request weather data from the specconnect API for a range of dates"""
         start_datetime_str = self._format_time(start_datetime)
         end_datetime_str = self._format_time(end_datetime)
