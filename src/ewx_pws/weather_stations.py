@@ -125,11 +125,11 @@ class WeatherStation(ABC):
         return(True)
         
     @abstractmethod
-    def _get_readings(self,params):
+    def _get_readings(self,start_datetime:datetime, end_datetime:datetime):
         """create API request and return str of json"""
         # get auth
-        print(f" this would be a reading from {self.id} for {params.get('start_datetime')} to {params.get('end_datetime')}")
-        return "{}"
+        print(f" this would be a reading from {self.id} for {start_datetime} to {end_datetime}")
+        return self.empty_response
     
     # override as necessary for sub-classes
     def _format_time(self, dt:datetime)->str:
@@ -186,8 +186,8 @@ class WeatherStation(ABC):
         # a flexible way to accept that and still be able to pull the content out.   create "content" abstract method?
         try:
             self.current_response = self._get_readings(
-                start_datetime,
-                end_datetime
+                start_datetime = start_datetime,
+                end_datetime = end_datetime
             )
 
         except Exception as e:
@@ -225,8 +225,6 @@ class WeatherStation(ABC):
     
 
 
-
-
 ##################################
 # Placeholder unfinished classes #
 ##################################
@@ -244,7 +242,7 @@ class DavisStation(WeatherStation):
         warnings("not implemented")
         return True
     
-    def _get_readings(self):
+    def _get_readings(self,start_datetime:datetime, end_datetime:datetime):
         warnings("not implemented")
         return self.empty_response
 
@@ -262,73 +260,8 @@ class RainwiseStation(WeatherStation):
         warnings("not implemented")
         return True
     
-    def _get_readings(self):
+    def _get_readings(self,start_datetime:datetime, end_datetime:datetime):
         warnings("not implemented")
         return self.empty_response
-    
 
-
-
-########## ZENTRA ############
-class ZentraConfig(WeatherStationConfig):
-    station_type : STATION_TYPE = "ZENTRA"
-    
-class ZentraStation(WeatherStation):
-    """Access the MeterGroup weather api for Zentra type Weather Stations"""    
-    def __init__(self,config:ZentraConfig):
-        super().__init__(config)
-        
-    def _check_config(self):
-        warnings("not implemented")
-        return True
-    
-    def _get_readings(self, params):
-        warnings.warn("not implemented")
-        return self.empty_response
-    
-
-    
-# def get_reading(station_type, station_config,
-#                 start_datetime_str = None,
-#                 end_datetime_str = None):
-    
-#     if not start_datetime_str:
-#         # no start ?  Use the internval 15 minutees before present timee.  see module for details.  Ignore end time if it's sent
-#         start_datetime,end_datetime =  previous_fifteen_minute_period()
-#     else:
-#         start_datetime = datetime.fromisoformat(start_datetime_str)
-#         if not end_datetime_str:
-#             # no end time, make end time 15 minutes from stard time given.  
-#             end_datetime = start_datetime + timedelta(minutes= 15)
-#         else:
-#             end_datetime = datetime.fromisoformat(end_datetime_str)
-
-
-#     params = station_config
-#     params['start_datetime'] = start_datetime
-#     params['end_datetime'] = end_datetime
-#     params['tz'] = 'ET'
-
-#     try:
-#         mwapi_resp = multiweatherapi.get_reading(station_type, **params)
-#     except Exception as e:
-#         raise e
-
-#     # includes mwapi_resp.resp_raw, and mwapi_resp.resp_transformed
-
-#     return mwapi_resp
-
-#     def reading_fields():
-#         """list of fields to expect in a reading, used for testing
-#         """
-#         return([
-#             "station_id",
-#             "request_datetime",
-#             "data_datetime",
-#             "atemp",
-#             "pcpn",
-#             "relh"
-#             ]
-#         )
-    
 
