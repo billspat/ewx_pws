@@ -8,6 +8,7 @@ from pydantic import Field
 from ewx_pws.weather_stations import WeatherStationConfig, WeatherStation
 
 class RainwiseConfig(WeatherStationConfig):
+    station_id : str
     station_type : str = 'RAINWISE'
     username : str = None
     sid : str = Field(description="Site id, assigned by Rainwise.")

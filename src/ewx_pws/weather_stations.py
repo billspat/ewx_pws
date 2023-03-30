@@ -245,23 +245,3 @@ class DavisStation(WeatherStation):
     def _get_readings(self,start_datetime:datetime, end_datetime:datetime):
         warnings("not implemented")
         return self.empty_response
-
-
-########## RAINWISE ############
-class RainwiseConfig(WeatherStationConfig):
-    station_type : STATION_TYPE = "RAINWISE"
-
-class RainwiseStation(WeatherStation):
-    def __init__(self,config:WeatherStationConfig):
-        self.station_type = 'rainwise'
-        super().__init__(config)
-
-    def _check_config(self):
-        warnings("not implemented")
-        return True
-    
-    def _get_readings(self,start_datetime:datetime, end_datetime:datetime):
-        warnings("not implemented")
-        return self.empty_response
-
-
