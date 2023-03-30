@@ -49,7 +49,7 @@ class DavisStation(WeatherStation):
 
         return(api_response)
 
-    def _compute_signature(self, t, start_datetime:datetime, end_datetime:datetime:
+    def _compute_signature(self, t, start_datetime:datetime, end_datetime:datetime):
         """
         This method computes the API signature used to call the Davis API via the nested function compute_signature_engine.
         """
