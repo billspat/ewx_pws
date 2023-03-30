@@ -46,7 +46,7 @@ class RainwiseStation(WeatherStation):
         Params are start time, end time, and interval.
         Returns raw api response.
         """
-        self.request = Request('GET',
+        self.current_api_request = Request('GET',
                                url='http://api.rainwise.net/main/v1.5/registered/get-historical.php',
                                params={'username': self.config.username,
                                        'sid': self.config.sid,
