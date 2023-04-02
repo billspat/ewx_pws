@@ -30,14 +30,3 @@ def test_can_instantiate_from_dict(fake_station_configs,fake_station_class):
     # test parent methods that call abstract methods
     assert fake_station._check_config() == True
     assert isinstance(fake_station.get_readings(), list)
-
-def test_zentra_config(fake_station_configs):
-    zconfig = ZentraConfig.parse_obj(fake_station_configs['ZENTRA'])
-    
-def test_zentra_subclass_weather_station(fake_station_configs):
-    zstation = ZentraStation.init_from_dict(fake_station_configs['ZENTRA'])
-    assert isinstance(zstation,WeatherStation)
-    assert isinstance(zstation.id, str)
-    assert isinstance(zstation.station_tz, str)
-    
-    assert isinstance(zstation.get_readings(), list)

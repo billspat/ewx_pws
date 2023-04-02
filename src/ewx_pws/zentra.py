@@ -31,7 +31,7 @@ class ZentraStation(WeatherStation):
     def _check_config(self,start_datetime, end_datetime):
         return True
     
-    def _get_readings(self, start_datetime:datetime, end_datetime:datetime, token, start_mrid=None, end_mrid=None):
+    def _get_readings(self, start_datetime:datetime, end_datetime:datetime, start_mrid=None, end_mrid=None):
         """ Builds, sends, and stores raw response from Zentra API"""
 
         self.current_api_request = Request('GET',
@@ -39,10 +39,10 @@ class ZentraStation(WeatherStation):
                                headers={
                                    'Authorization': "Token " + self.config.token},
                                params={'device_sn': self.config.sn,
-                                       'start_date': self.config.start_datetime,
-                                       'end_date': self.config.end_datetime,
-                                       'start_mrid': self.config.start_mrid,
-                                       'end_mrid': self.config.end_mrid}).prepare()
+                                       'start_date': start_datetime,
+                                       'end_date': end_datetime,
+                                       'start_mrid': start_mrid,
+                                       'end_mrid': end_mrid}).prepare()
         
         api_response = Session().send(self.current_api_request)
 

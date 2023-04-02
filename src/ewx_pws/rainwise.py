@@ -4,23 +4,17 @@ import json
 from requests import Session, Request
 from datetime import datetime, timezone
 
-from pydantic import Field
-from ewx_pws.weather_stations import WeatherStationConfig, WeatherStation
+from ewx_pws.weather_stations import WeatherStationConfig, WeatherStation, STATION_TYPE
 
 class RainwiseConfig(WeatherStationConfig):
-    station_id : str
-    station_type : str = 'RAINWISE'
-    username : str = None
-    sid : str = Field(description="Site id, assigned by Rainwise.")
-    pid : str = Field(description="Password id, assigned by Rainwise.")
-    mac : str = Field(description="MAC of the weather station. Must be in the group assigned to username.")
-    ret_form : str = Field(description="Values xml or json; returns the data as JSON or XML.")
-    sensor_sn : dict[str,str] = Field(description="A dict of sensor serial numbers.  Defaults to None.")
-    
-    # access_token : str = Field('', description="needed for api auth, filled in by auth request ")
-    
-    # TODO class RainwiseSensor() of elements in sensor_sn
-
+        station_id     : str
+        station_type   : STATION_TYPE = 'RAINWISE'
+        username       : str = None
+        sid            : str # Site id, assigned by Rainwise.
+        pid            : str # Password id, assigned by Rainwise.
+        mac            : str # MAC of the weather station. Must be in the group assigned to username.
+        ret_form       : str # Values xml or json; returns the data as JSON or XML.
+        tz             : str = 'ET'
 
 class RainwiseStation(WeatherStation):
     """ config is RainwiseConfig type """

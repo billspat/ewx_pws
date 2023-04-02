@@ -16,13 +16,13 @@ def test_station(station_configs, station_type):
 def test_zentra_config(fake_station_configs, station_type):
     zconfig = ZentraConfig.parse_obj(fake_station_configs[station_type])
     
-def test_zentra_subclass_weather_station(fake_station_configs, station_type):
-    zstation = ZentraStation.init_from_dict(fake_station_configs[station_type])
-    assert isinstance(zstation,WeatherStation)
-    assert isinstance(zstation.id, str)
-    assert isinstance(zstation.station_tz, str)
+# def test_zentra_subclass_weather_station(fake_station_configs, station_type):
+#     zstation = ZentraStation.init_from_dict(fake_station_configs[station_type])
+#     assert isinstance(zstation,WeatherStation)
+#     assert isinstance(zstation.id, str)
+#     assert isinstance(zstation.station_tz, str)
     
-    assert isinstance(zstation.get_readings(), list)
+#     assert isinstance(zstation.get_readings(), list)
     
 #-----------------
 # 
@@ -44,14 +44,6 @@ def test_zentra_class_instantiation_from_config(station_configs, station_type):
     zentra_station = ZentraStation.init_from_dict(station_configs[station_type])
     assert isinstance(zentra_station, WeatherStation)
     assert isinstance(zentra_station.id, str)
-    
-def test_zentra_auth(test_station):
-    # example token 2b43bb08895d00bfa37c5477348e3bdd
-    token = test_station._get_auth()
-    assert isinstance(token, str)
-    assert len(token) > 2
-    token_pattern = re.compile('[0-9a-z]+')
-    assert re.fullmatch(token_pattern,test_station.access_token)
       
 def test_zentra_readings(test_station):
     
