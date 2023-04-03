@@ -1,4 +1,5 @@
 from ewx_pws.weather_stations import  WeatherStationConfig, WeatherStation
+import requests
 
 import pytest, json 
 
@@ -9,8 +10,13 @@ def fake_station_class():
             super().__init__(config)
         def _check_config(self)->bool:
             return(True)        
-        def _get_reading(self,params):
-            return self.empty_response 
+        def _get_readings(self,start_datetime, end_datetime):
+            # this is a known fake API for testing.   
+            url = 'https://jsonplaceholder.typicode.com/todos/'
+            
+            response = requests.get(url)
+            return response # self.empty_response 
+        
     return(FakeStation)
 
 def test_can_subclass_weather_station(fake_station_configs,fake_station_class):
