@@ -4,18 +4,22 @@ This document is for Enviroweather staff to get setup and to work on this code b
 
 ## Overview of Process
 
- - in the gitlab project, create an issue with a number N
- - and/or pick an issue to work on
- - create a branch for the issue ( on local computer), prefixed with number N
- - do a bunch of commits in the branch local
- - add tests in local branch to ensure it works
- - push branch to project when it's done (or close)
- - create a merge request for branch 
+ - in the gitlab project, create an issue with a number N and/or pick an issue to work on
+     - check the current milestone to help prioritize which issues have priority
+ - in gitlab, assign the issue to yourself (using the 'assignees' option in top right)
+ - in your computer, create a branch for the issue ( on local computer), prefixed with number N
+     - for example issue "42: fix flux capacitor" branch could be named "42-flux-capacitor" 
+ - code to address the issue in your local, and add commits as you add functionality
+     - commits aren't backups but should be for completed pieces of functionality.  Use a backup system to keep a backup of your incompleted work
+ - add tests as you go for in local branch
+ - push branch to project with the "-u" option (tracking branch) when 1)you have significant functionality you want to have reviewed or share or 2) it's done  and tests pass
+ - add comments to the gitlab issue if there are problems, need to ask questions, propose ideas or code to solve, etc
+ - if the main branch has been updated while you are working in this branch, frequently use 'git rebase' to update your branch to contain the latest code from main.  The goal is that when your brn
+ - when tests are passing and issue is addressed create a merge request for branch from main
  - someone reviews code and merges into main, squashing commits and re-write commit message "fixes #N"
  - once all the working code in the branch is incorporated into the main branch, delete branch in git project
  - close any issues related to the branch/merge request, make a note in the issue which MR/commit is most relevant
  
-
 ## Creating issues in gitlab
 
 ### File Issue for fix
