@@ -1,7 +1,7 @@
 
 # ZENTRA WIP
 
-import json,pytz
+import json,pytz,time
 from requests import Session, Request
 from datetime import datetime, timezone
 
@@ -26,6 +26,7 @@ class ZentraStation(WeatherStation):
 
     
     def __init__(self,config:ZentraConfig):
+        self.retry_on_throttle : bool = False
         super().__init__(config)  
         
     def _check_config(self,start_datetime, end_datetime):
@@ -46,6 +47,17 @@ class ZentraStation(WeatherStation):
         
         api_response = Session().send(self.current_api_request)
 
+        # Handles the 1 request/60 second throttling error
+        if api_response.status_code == 429 and self.retry_on_throttle == True:
+            
+            lockout = int(api_response.text[api_response.text.find("Lock out expires in ")+20:api_response.text.find("Lock out expires in ")+22])
+            
+            print("Error received for too frequent attempts, retrying in {} seconds...".format(lockout+1))
+
+            time.sleep(lockout + 1)
+
+            return self._get_readings(start_datetime,end_datetime,start_mrid,end_mrid)
+        
         return(api_response)
 
     
