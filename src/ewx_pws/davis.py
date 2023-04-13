@@ -27,6 +27,7 @@ class DavisStation(WeatherStation):
 
     
     def __init__(self,config:DavisConfig):
+        self.apisig = None
         super().__init__(config)  
         
     def _check_config(self,start_datetime, end_datetime):
@@ -36,18 +37,17 @@ class DavisStation(WeatherStation):
         """ Builds, sends, and stores raw response from Davis API"""
         t = int(datetime.now().timestamp())
 
-        self._compute_signature(self, t, start_datetime, end_datetime)
+        self._compute_signature(t, start_datetime, end_datetime)
         self.current_api_request = Request('GET',
                                url='https://api.weatherlink.com/v2/historic/' + self.config.sn,
                                params={'api-key': self.config.apikey,
                                        't': t,
                                        'start_date': start_datetime,
                                        'end_date': end_datetime,
-                                       'api-signature': self.config.apisig}).prepare()
+                                       'api-signature': self.apisig}).prepare()
         
         api_response = Session().send(self.current_api_request)
 
-        return(api_response)
 
     def _compute_signature(self, t, start_datetime:datetime, end_datetime:datetime):
         """
@@ -80,12 +80,13 @@ class DavisStation(WeatherStation):
                         'start-timestamp': start_datetime,
                         'end-timestamp': end_datetime}
             params = collections.OrderedDict(sorted(params.items()))
-            self.config.apisig = compute_signature_engine()
+            self.apisig = compute_signature_engine()
         else:
             params = {'api-key': self.config.apikey, 'station-id': self.config.sn, 't': self.config.t}
             params = collections.OrderedDict(sorted(params.items()))
-            self.config.apisig = compute_signature_engine()
+            self.apisig = compute_signature_engine()
 
+        return self.apisig
     def _handle_error(self):
         """ place holder to remind that we need to add err handling to each class"""
         pass
