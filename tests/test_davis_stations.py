@@ -1,6 +1,5 @@
 from ewx_pws.davis import DavisStation, DavisConfig, WeatherStationConfig, WeatherStation
 import pytest, re
-from datetime import datetime, timezone
 from pprint import pprint
 
 

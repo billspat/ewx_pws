@@ -46,7 +46,7 @@ class DavisStation(WeatherStation):
                                        'end_date': end_datetime,
                                        'api-signature': self.apisig}).prepare()
         
-        api_response = Session().send(self.current_api_request)
+        self.current_response = Session().send(self.current_api_request)
 
 
     def _compute_signature(self, t, start_datetime:datetime, end_datetime:datetime):
@@ -86,7 +86,6 @@ class DavisStation(WeatherStation):
             params = collections.OrderedDict(sorted(params.items()))
             self.apisig = compute_signature_engine()
 
-        return self.apisig
     def _handle_error(self):
         """ place holder to remind that we need to add err handling to each class"""
         pass
