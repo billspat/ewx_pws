@@ -54,28 +54,27 @@ def test_zentra_readings(test_station):
     edt="2022-12-01 19:15:00"  
 
     # test with hard-coded time
-    readings = test_station.get_readings(start_datetime_str=sdt,end_datetime_str=edt)
+    readings = test_station._get_readings(start_datetime=sdt,end_datetime=edt)
 
     # optional, print outputs for debug
     # use pytest -s to see this output
     pprint(vars(test_station.current_response))
     print('-----')
     pprint(test_station.current_response.content)
+    print(test_station.current_response.status_code)
+    
+    transformed_readings = test_station._transform()
         
+    # for value in transformed_readings.readings:
+    #     print (value.station_id)
+    #     print (value.request_datetime)
+    #     print (value.data_datetime)
+    #     print (value.atemp)
+    #     print (value.pcpn)
+    #     print (value.relh)
+    
     assert test_station.current_response is not None
     assert test_station.current_response.status_code == 200
     assert readings is not None
-    
-    
-    
-
-    
-    
-    
-
-
-
-
-    
-    
+    assert len(transformed_readings.readings) > 0
     

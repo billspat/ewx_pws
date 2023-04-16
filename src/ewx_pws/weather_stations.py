@@ -40,6 +40,15 @@ class GenericConfig(WeatherStationConfig):
     config:dict = {}
 
 
+class WeatherStationReading(BaseModel):
+    station_id : str
+    request_datetime : datetime # UTC
+    data_datetime : datetime    # UTC
+    atemp : float or None       # celsius 
+    pcpn : float or None        # mm, > 0
+    relh : float or None        # percent
+
+
 #############################
 #        BASE CLASS         #
 #############################
@@ -130,6 +139,11 @@ class WeatherStation(ABC):
         # get auth
         print(f" this would be a reading from {self.id} for {start_datetime} to {end_datetime}")
         return self.empty_response
+
+    @abstractmethod
+    def _transform(self, response):
+        """transforms a response into a json to be exported"""
+        return self.transformed_data
     
     # override as necessary for sub-classes
     def _format_time(self, dt:datetime)->str:
@@ -223,6 +237,8 @@ class WeatherStation(ABC):
             warnings.warn("empty response when testing api for station {self.id}")
             return False
     
+class WeatherStationReadings(BaseModel):
+    readings: list[WeatherStationReading] = list()
 
 
 ##################################
