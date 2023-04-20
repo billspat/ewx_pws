@@ -1,5 +1,6 @@
 from ewx_pws.zentra import ZentraConfig, ZentraStation, WeatherStationConfig, WeatherStation
 import pytest, re
+from datetime import datetime
 from pprint import pprint
 
 
@@ -63,18 +64,22 @@ def test_zentra_readings(test_station):
     pprint(test_station.current_response.content)
     print(test_station.current_response.status_code)
     
-    transformed_readings = test_station._transform()
-        
-    # for value in transformed_readings.readings:
-    #     print (value.station_id)
-    #     print (value.request_datetime)
-    #     print (value.data_datetime)
-    #     print (value.atemp)
-    #     print (value.pcpn)
-    #     print (value.relh)
-    
     assert test_station.current_response is not None
     assert test_station.current_response.status_code == 200
     assert readings is not None
+
+    transformed_readings = test_station._transform()
     assert len(transformed_readings.readings) > 0
-    
+    for value in transformed_readings.readings:
+        assert isinstance(value.station_id, str)
+        assert isinstance(value.data_datetime, datetime)
+        assert isinstance(value.atemp, float)
+        assert isinstance(value.pcpn, float)
+        assert isinstance(value.relh, float)
+
+        # print (value.station_id)
+        # print (value.request_datetime)
+        # print (value.data_datetime)
+        # print (value.atemp)
+        # print (value.pcpn)
+        # print (value.relh, end="\n")
