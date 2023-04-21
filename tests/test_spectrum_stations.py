@@ -1,5 +1,6 @@
 from ewx_pws.spectrum import SpectrumConfig, SpectrumStation, WeatherStationConfig, WeatherStation
 import pytest, re
+from datetime import datetime
 from pprint import pprint
 
 # note: fixtures auto-imported from conftest.py
@@ -52,17 +53,18 @@ def test_spectrum_readings(test_station):
     assert test_station.current_response.status_code == 200
     assert readings is not None
     
+    transformed_readings = test_station._transform()
+    assert len(transformed_readings.readings) > 0
+    for value in transformed_readings.readings:
+        assert isinstance(value.station_id, str)
+        assert isinstance(value.data_datetime, datetime)
+        assert isinstance(value.atemp, float)
+        assert isinstance(value.pcpn, float)
+        assert isinstance(value.relh, float)
     
-    
-    
-
-    
-    
-    
-
-
-
-
-    
-    
-    
+        # print (value.station_id)
+        # print (value.request_datetime)
+        # print (value.data_datetime)
+        # print (value.atemp)
+        # print (value.pcpn)
+        # print (value.relh, end="\n")

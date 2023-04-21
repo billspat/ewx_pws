@@ -4,7 +4,7 @@ from requests import Session, Request
 from datetime import datetime, timezone
 
 from pydantic import Field
-from ewx_pws.weather_stations import WeatherStationConfig, WeatherStation, STATION_TYPE
+from ewx_pws.weather_stations import WeatherStationConfig, WeatherStationReading, WeatherStationReadings, WeatherStation, STATION_TYPE
 
 class SpectrumConfig(WeatherStationConfig):
         station_id     : str
@@ -54,12 +54,39 @@ class SpectrumStation(WeatherStation):
                                    url='https://api.specconnect.net:6703/api/Customer/GetDataInDateTimeRange',
                                    params={'customerApiKey': self.config.apikey, 'serialNumber': self.config.sn,
                                            'startDate': start_datetime_str, 'endDate': end_datetime_str}).prepare()
+        self.request_datetime = datetime.utcnow()
+        self.current_response = Session().send(self.current_api_request)
         
-        api_response = Session().send(self.current_api_request)
+        self.response_data = json.loads(self.current_response.content)
+        return(self.current_response)
 
-        return(api_response)
+    def _transform(self):
+        """
+        Transforms data into a standardized format and returns it as a WeatherStationReadings object.
+        """
+        readings_list = WeatherStationReadings()
 
-    
+        if 'EquipmentRecords' not in self.response_data.keys():
+            return readings_list
+        for record in self.response_data['EquipmentRecords']:
+            temp = SpectrumReading(station_id=record['SerialNumber'],
+                            request_datetime=self.request_datetime,
+                            data_datetime=record['TimeStamp'],
+                            atemp=round((record['SensorData'][1]["DecimalValue"] - 32) * 5 / 9, 2),
+                            pcpn=round(record['SensorData'][0]["DecimalValue"] * 25.4, 2),
+                            relh=round(record['SensorData'][2]["DecimalValue"], 2))
+            readings_list.readings.append(temp)
+
+        return readings_list
+
     def _handle_error(self):
         """ place holder to remind that we need to add err handling to each class"""
         pass
+
+class SpectrumReading(WeatherStationReading):
+    station_id : str
+    request_datetime : datetime or None = None # UTC
+    data_datetime : datetime           # UTC
+    atemp : float or None = None       # celsius 
+    pcpn : float or None = None        # mm, > 0
+    relh : float or None = None        # percent
