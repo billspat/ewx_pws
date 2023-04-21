@@ -4,7 +4,7 @@ import json
 from requests import Session, Request
 from datetime import datetime, timezone
 
-from ewx_pws.weather_stations import WeatherStationConfig, WeatherStation, STATION_TYPE
+from ewx_pws.weather_stations import WeatherStationConfig, WeatherStationReading, WeatherStationReadings, WeatherStation, STATION_TYPE
 
 class RainwiseConfig(WeatherStationConfig):
         station_id     : str
@@ -50,9 +50,40 @@ class RainwiseStation(WeatherStation):
                                        'interval': interval,
                                        'sdate': start_datetime,
                                        'edate': end_datetime}).prepare()
-        api_response = Session().send(self.current_api_request)
-        return(api_response)
+        self.request_datetime = datetime.utcnow()
+        self.current_response = Session().send(self.current_api_request)
+
+        self.response_data = json.loads(self.current_response.content)
+        return(self.current_response)
+
+    def _transform(self):
+        """
+        Transforms data into a standardized format and returns it as a WeatherStationReadings object.
+        """
+        readings_list = WeatherStationReadings()
+
+        # Return an empty list if there is no data contained in the response, this covers error 429
+        if 'station_id' not in self.response_data.keys():
+            return readings_list
+        for key in self.response_data['times']:
+            temp = RainwiseReading(station_id=self.response_data['station_id'],
+                            request_datetime=self.request_datetime,
+                            data_datetime=self.response_data['times'][key],
+                            atemp=round((float(self.response_data['temp'][key]) - 32) * 5/9, 2),
+                            pcpn=round(float(self.response_data['precip'][key]) * 25.4, 2),
+                            relh=round(float(self.response_data['hum'][key]), 2))
+            readings_list.readings.append(temp)
+            
+        return readings_list
 
     def _handle_error(self):
         """ place holder to remind that we need to add err handling to each class"""
         pass
+
+class RainwiseReading(WeatherStationReading):
+    station_id : str
+    request_datetime : datetime or None = None # UTC
+    data_datetime : datetime           # UTC
+    atemp : float or None = None       # celsius 
+    pcpn : float or None = None        # mm, > 0
+    relh : float or None = None        # percent
