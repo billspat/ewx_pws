@@ -45,6 +45,7 @@ class ZentraStation(WeatherStation):
                                        'start_mrid': start_mrid,
                                        'end_mrid': end_mrid}).prepare()
         
+        self.request_datetime = datetime.utcnow()
         self.current_response = Session().send(self.current_api_request)
 
         # Handles the 1 request/60 second throttling error
@@ -74,7 +75,7 @@ class ZentraStation(WeatherStation):
         
         # Build a ZentraReading object for each and put it into the readings_list
         for reading in self.response_data['data']['Air Temperature'][0]['readings']:
-            temp = ZentraReading(station_id=self.response_data['data']['Air Temperature'][0]['metadata']['device_name'],data_datetime=reading['timestamp_utc'])
+            temp = ZentraReading(station_id=self.response_data['data']['Air Temperature'][0]['metadata']['device_name'],request_datetime=self.request_datetime, data_datetime=reading['timestamp_utc'])
             temp.atemp = reading['value']
             timestamp = reading['timestamp_utc']
             for reading2 in self.response_data['data']['Precipitation'][0]['readings']:
