@@ -1,5 +1,6 @@
 from ewx_pws.davis import DavisStation, DavisConfig, WeatherStationConfig, WeatherStation
-import pytest, re
+import pytest, re, time, json
+from datetime import datetime
 from pprint import pprint
 
 
@@ -48,14 +49,21 @@ def test_davis_class_instantiation_from_config(station_configs, station_type):
 def test_davis_readings(test_station):
     
     sdt="2022-12-01 19:00:00"
-    edt="2022-12-01 19:15:00"  
+    edt="2022-12-01 19:15:00" 
+
+    dtsdt=datetime.strptime(sdt, "%Y-%m-%d %H:%M:%S")
+    dtedt=datetime.strptime(edt, "%Y-%m-%d %H:%M:%S")
+
+    unixsdt=int(time.mktime(dtsdt.timetuple()))
+    unixedt=int(time.mktime(dtedt.timetuple()))
+ 
 
     # test with hard-coded time
-    readings = test_station._get_readings(start_datetime=sdt,end_datetime=edt)
+    readings = test_station._get_readings(start_timestamp=unixsdt,end_timestamp=unixedt)
     
-    print(readings)
+    print(json.loads(readings.content)['sensors'])
     # optional, print outputs for debug
-    # use pytest -s to see this output
+    #use pytest -s to see this output
     pprint(vars(test_station.current_response))
     print('-----')
     pprint(test_station.current_response.content)
@@ -63,6 +71,22 @@ def test_davis_readings(test_station):
     assert test_station.current_response is not None
     assert test_station.current_response.status_code == 200
     assert readings is not None
+
+    transformed_readings = test_station._transform()
+    assert len(transformed_readings.readings) > 0
+    for value in transformed_readings.readings:
+        assert isinstance(value.station_id, str)
+        assert isinstance(value.data_datetime, datetime)
+        assert isinstance(value.atemp, float)
+        assert isinstance(value.pcpn, float)
+        assert isinstance(value.relh, float)
+
+        # print (value.station_id, end=", ")
+        # print (value.request_datetime, end=", ")
+        # print (value.data_datetime, end=", ")
+        # print (value.atemp, end=", ")
+        # print (value.pcpn, end=", ")
+        # print (value.relh, end="\n")
     
     
     
