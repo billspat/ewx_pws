@@ -1,11 +1,12 @@
 # ONSET ###################
 
 import json
+from dotenv import dotenv_values
 from requests import Session, Request
 from datetime import datetime, timezone
 
 from pydantic import Field
-from ewx_pws.weather_stations import WeatherStationConfig, WeatherStation, STATION_TYPE
+from ewx_pws.weather_stations import WeatherStationConfig, WeatherStationReading, WeatherStationReadings, WeatherStation, STATION_TYPE
 
 
 ### Onset Notes
@@ -113,13 +114,67 @@ class OnsetStation(WeatherStation):
                 headers={'Authorization': "Bearer " + access_token},
                 params={'loggers': self.config.sn,
                     'start_date_time': start_datetime_str,
-                    'end_date_time': start_datetime_str}).prepare()
+                    'end_date_time': end_datetime_str}).prepare()
         
-        api_response = Session().send(self.current_api_request)
+        self.request_datetime = datetime.utcnow()
+        self.current_response = Session().send(self.current_api_request)
+        self.response_data = json.loads(self.current_response.content)
 
-        return(api_response)
+        return(self.current_response)
+    
+    def _transform(self):
+        """
+        Transforms data into a standardized format and returns it as a WeatherStationReadings object.
+        """
+        readings_list = WeatherStationReadings()
+
+        # Return an empty list if there is no data contained in the response, this covers error 429
+        if 'observation_list' not in self.response_data.keys():
+            return readings_list
         
+        readinginfos = {}
+        sensor_sns = json.loads(dotenv_values(".env")['ONSET'])['sensor_sn']
+        atemp_key = sensor_sns['atemp']
+        pcpn_key = sensor_sns['pcpn']
+        relh_key = sensor_sns['relh']
+        station_sn = self.response_data["observation_list"][0]["logger_sn"]
+
+        # Gathering each reading into an easily formattable manner
+        for reading in self.response_data["observation_list"]:
+            # Remove Z's from ends of timestamps
+            ts = reading["timestamp"]
+            if reading["timestamp"][-1].lower() == 'z':
+                    ts = ts[:-1]
+            # Create new entry if time hasn't been encountered yet
+            if ts not in readinginfos.keys():
+                readinginfos[ts] = {}
+            # Set entries to contain proper data
+            if reading["sensor_sn"] == atemp_key:
+                readinginfos[ts]["atemp"] = round(float(reading['si_value']), 2)
+            elif reading["sensor_sn"] == pcpn_key:
+                readinginfos[ts]["pcpn"] = round(float(reading['si_value']), 2)
+            elif reading["sensor_sn"] == relh_key:
+                readinginfos[ts]["relh"] = round(float(reading['si_value']), 2)
+
+        # Putting that data into a WeatherStationsReading object in OnsetReading class format
+        for timestamp in readinginfos:
+            readings_list.readings.append(OnsetReading(station_id=station_sn,
+                                    request_datetime=self.request_datetime,
+                                    data_datetime=datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S'),
+                                    atemp=readinginfos[timestamp]['atemp'],
+                                    pcpn=readinginfos[timestamp]['pcpn'],
+                                    relh=readinginfos[timestamp]['relh']))
+                
+        return readings_list
+
     def _handle_error(self):
         """ place holder to remind that we need to add err handling to each class"""
         pass
 
+class OnsetReading(WeatherStationReading):
+    station_id : str
+    request_datetime : datetime or None = None # UTC
+    data_datetime : datetime           # UTC
+    atemp : float or None = None       # celsius 
+    pcpn : float or None = None        # mm, > 0
+    relh : float or None = None        # percent
