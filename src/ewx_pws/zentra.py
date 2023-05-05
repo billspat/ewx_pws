@@ -63,25 +63,28 @@ class ZentraStation(WeatherStation):
 
         return(self.current_response)
 
-    def _transform(self):
+    def _transform(self, data=None):
         """
         Transforms data into a standardized format and returns it as a WeatherStationReadings object.
+        data param if left to default tries for self.response_data processing
         """
+        if data is None:
+            data = self.response_data
         readings_list = WeatherStationReadings()
 
         # Return an empty list if there is no data contained in the response, this covers error 429
-        if 'data' not in self.response_data.keys():
+        if 'data' not in data.keys():
             return readings_list
         
         # Build a ZentraReading object for each and put it into the readings_list
-        for reading in self.response_data['data']['Air Temperature'][0]['readings']:
-            temp = ZentraReading(station_id=self.response_data['data']['Air Temperature'][0]['metadata']['device_name'],request_datetime=self.request_datetime, data_datetime=reading['timestamp_utc'])
+        for reading in data['data']['Air Temperature'][0]['readings']:
+            temp = ZentraReading(station_id=data['data']['Air Temperature'][0]['metadata']['device_name'],request_datetime=self.request_datetime, data_datetime=reading['timestamp_utc'])
             temp.atemp = reading['value']
             timestamp = reading['timestamp_utc']
-            for reading2 in self.response_data['data']['Precipitation'][0]['readings']:
+            for reading2 in data['data']['Precipitation'][0]['readings']:
                 if reading2['timestamp_utc'] == timestamp:
                     temp.pcpn = reading2['value']
-            for reading2 in self.response_data['data']['Relative Humidity'][0]['readings']:
+            for reading2 in data['data']['Relative Humidity'][0]['readings']:
                 if reading2['timestamp_utc'] == timestamp:
                     temp.relh = reading2['value']
             readings_list.readings.append(temp)

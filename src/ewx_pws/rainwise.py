@@ -56,22 +56,25 @@ class RainwiseStation(WeatherStation):
         self.response_data = json.loads(self.current_response.content)
         return(self.current_response)
 
-    def _transform(self):
+    def _transform(self, data=None):
         """
         Transforms data into a standardized format and returns it as a WeatherStationReadings object.
+        data param if left to default tries for self.response_data processing
         """
+        if data is None:
+            data = self.response_data
         readings_list = WeatherStationReadings()
 
         # Return an empty list if there is no data contained in the response, this covers error 429
-        if 'station_id' not in self.response_data.keys():
+        if 'station_id' not in data.keys():
             return readings_list
-        for key in self.response_data['times']:
-            temp = RainwiseReading(station_id=self.response_data['station_id'],
+        for key in data['times']:
+            temp = RainwiseReading(station_id=data['station_id'],
                             request_datetime=self.request_datetime,
-                            data_datetime=self.response_data['times'][key],
-                            atemp=round((float(self.response_data['temp'][key]) - 32) * 5/9, 2),
-                            pcpn=round(float(self.response_data['precip'][key]) * 25.4, 2),
-                            relh=round(float(self.response_data['hum'][key]), 2))
+                            data_datetime=data['times'][key],
+                            atemp=round((float(data['temp'][key]) - 32) * 5/9, 2),
+                            pcpn=round(float(data['precip'][key]) * 25.4, 2),
+                            relh=round(float(data['hum'][key]), 2))
             readings_list.readings.append(temp)
             
         return readings_list

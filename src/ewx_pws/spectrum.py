@@ -60,15 +60,18 @@ class SpectrumStation(WeatherStation):
         self.response_data = json.loads(self.current_response.content)
         return(self.current_response)
 
-    def _transform(self):
+    def _transform(self, data=None):
         """
         Transforms data into a standardized format and returns it as a WeatherStationReadings object.
+        data param if left to default tries for self.response_data processing
         """
+        if data is None:
+            data = self.response_data
         readings_list = WeatherStationReadings()
 
-        if 'EquipmentRecords' not in self.response_data.keys():
+        if 'EquipmentRecords' not in data.keys():
             return readings_list
-        for record in self.response_data['EquipmentRecords']:
+        for record in data['EquipmentRecords']:
             temp = SpectrumReading(station_id=record['SerialNumber'],
                             request_datetime=self.request_datetime,
                             data_datetime=record['TimeStamp'],
