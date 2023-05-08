@@ -222,7 +222,6 @@ class WeatherStation(ABC):
         """
         if data is None:
             data = self.response_data
-        readings_list = WeatherStationReadings()
 
         return self._transform(data)
 

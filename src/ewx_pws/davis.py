@@ -77,8 +77,6 @@ class DavisStation(WeatherStation):
         Transforms data into a standardized format and returns it as a WeatherStationReadings object.
         data param if left to default tries for self.response_data processing
         """
-        if data is None:
-            data = self.response_data
         readings_list = WeatherStationReadings()
 
         if 'sensors' not in data.keys():

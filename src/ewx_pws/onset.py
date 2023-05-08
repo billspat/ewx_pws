@@ -127,8 +127,6 @@ class OnsetStation(WeatherStation):
         Transforms data into a standardized format and returns it as a WeatherStationReadings object.
         data param if left to default tries for self.response_data processing
         """
-        if data is None:
-            data = self.response_data
         readings_list = WeatherStationReadings()
 
         # Return an empty list if there is no data contained in the response, this covers error 429
@@ -136,7 +134,7 @@ class OnsetStation(WeatherStation):
             return readings_list
         
         readinginfos = {}
-        sensor_sns = json.loads(dotenv_values(".env")['ONSET'])['sensor_sn']
+        sensor_sns = self.config.sensor_sn
         atemp_key = sensor_sns['atemp']
         pcpn_key = sensor_sns['pcpn']
         relh_key = sensor_sns['relh']

@@ -46,6 +46,9 @@ def test_onset_readings(test_station):
     sdt="2022-12-01 19:00:00"
     edt="2022-12-01 19:15:00"  
 
+    for key in ['atemp', 'pcpn', 'relh']:
+        assert key in test_station.config.sensor_sn
+
     # test with hard-coded time
     readings = test_station.get_readings(start_datetime_str=sdt,end_datetime_str=edt)
 
@@ -80,16 +83,3 @@ def test_onset_readings(test_station):
         # print (value.atemp)
         # print (value.pcpn)
         # print (value.relh, end="\n")
-    
-    
-
-    
-    
-    
-
-
-
-
-    
-    
-    
