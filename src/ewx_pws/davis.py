@@ -1,7 +1,7 @@
 # DAVIS WIP
 
 import collections, hashlib, hmac
-import json,pytz
+import json,pytz, time
 from requests import Session, Request
 from datetime import datetime, timezone
 
@@ -33,12 +33,15 @@ class DavisStation(WeatherStation):
     def _check_config(self,start_datetime, end_datetime):
         return True
 
-    def _get_readings(self, start_timestamp:int, end_timestamp:int):
+    def _get_readings(self, start_datetime:int, end_datetime:int):
         """ 
         Builds, sends, and stores raw response from Davis API
         NOTE: Conversion from datetime to unix timestamp is done before the function, in
         """
         t = int(datetime.now().timestamp())
+
+        start_timestamp=int(time.mktime(start_datetime.timetuple()))
+        end_timestamp=int(time.mktime(end_datetime.timetuple()))
 
         self._compute_signature(t=t, start_timestamp=start_timestamp, end_timestamp=end_timestamp)
         self.current_api_request = Request('GET',

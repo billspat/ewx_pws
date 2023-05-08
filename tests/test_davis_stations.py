@@ -1,5 +1,5 @@
 from ewx_pws.davis import DavisStation, DavisConfig, WeatherStationConfig, WeatherStation
-import pytest, re, time, json
+import pytest, re
 from datetime import datetime
 from pprint import pprint
 
@@ -51,17 +51,9 @@ def test_davis_readings(test_station):
     sdt="2022-12-01 19:00:00"
     edt="2022-12-01 19:15:00" 
 
-    dtsdt=datetime.strptime(sdt, "%Y-%m-%d %H:%M:%S")
-    dtedt=datetime.strptime(edt, "%Y-%m-%d %H:%M:%S")
-
-    unixsdt=int(time.mktime(dtsdt.timetuple()))
-    unixedt=int(time.mktime(dtedt.timetuple()))
- 
-
     # test with hard-coded time
-    readings = test_station._get_readings(start_timestamp=unixsdt,end_timestamp=unixedt)
+    readings = test_station.get_readings(start_datetime_str=sdt,end_datetime_str=edt)
     
-    print(json.loads(readings.content)['sensors'])
     # optional, print outputs for debug
     #use pytest -s to see this output
     pprint(vars(test_station.current_response))
@@ -72,7 +64,7 @@ def test_davis_readings(test_station):
     assert test_station.current_response.status_code == 200
     assert readings is not None
 
-    transformed_readings = test_station._transform()
+    transformed_readings = test_station.transform()
     assert len(transformed_readings.readings) > 0
     for value in transformed_readings.readings:
         assert isinstance(value.station_id, str)
@@ -87,17 +79,4 @@ def test_davis_readings(test_station):
         # print (value.atemp, end=", ")
         # print (value.pcpn, end=", ")
         # print (value.relh, end="\n")
-    
-    
-    
-
-    
-    
-    
-
-
-
-
-    
-    
     

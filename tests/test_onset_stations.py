@@ -65,7 +65,7 @@ def test_onset_readings(test_station):
     assert onset_message != 'OK: Found: 0 results.'
     print(onset_message)
 
-    transformed_readings = test_station._transform()
+    transformed_readings = test_station.transform()
     assert len(transformed_readings.readings) > 0
     for value in transformed_readings.readings:
         assert isinstance(value.station_id, str)

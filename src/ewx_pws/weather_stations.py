@@ -214,6 +214,17 @@ class WeatherStation(ABC):
 
         # this is saved as a class attribute but returned for other processing 
         return response_data
+    
+    def transform(self, data = None):
+        """
+        Transforms data and return it in a standardized format. 
+        data: optional input used to load in data if transform of existing data dictionary is required.
+        """
+        if data is None:
+            data = self.response_data
+        readings_list = WeatherStationReadings()
+
+        return self._transform(data)
 
     def current_response_data(self):
         json.loads(self.current_response._content)

@@ -51,7 +51,7 @@ def test_rainwise_readings(test_station):
     assert test_station.current_response.status_code == 200
     assert readings is not None
 
-    transformed_readings = test_station._transform()
+    transformed_readings = test_station.transform()
     assert len(transformed_readings.readings) > 0
     for value in transformed_readings.readings:
         assert isinstance(value.station_id, str)
