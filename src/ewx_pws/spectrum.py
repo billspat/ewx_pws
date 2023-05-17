@@ -54,10 +54,7 @@ class SpectrumStation(WeatherStation):
                                    url='https://api.specconnect.net:6703/api/Customer/GetDataInDateTimeRange',
                                    params={'customerApiKey': self.config.apikey, 'serialNumber': self.config.sn,
                                            'startDate': start_datetime_str, 'endDate': end_datetime_str}).prepare()
-        self.request_datetime = datetime.utcnow()
         self.current_response = Session().send(self.current_api_request)
-        
-        self.response_data = json.loads(self.current_response.content)
         return(self.current_response)
 
     def _transform(self, data=None):

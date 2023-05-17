@@ -60,15 +60,12 @@ def test_onset_readings(test_station):
         
     assert test_station.current_response is not None
     assert test_station.current_response.status_code == 200
-    assert readings is not None
-    
-    onset_observation_list = readings['observation_list']
-    assert len(onset_observation_list) > 0
-    onset_message = readings['message']
-    assert onset_message != 'OK: Found: 0 results.'
-    print(onset_message)
+    assert type(readings) is list
+    assert len(readings) >= 2
+    assert 'station_type' in readings[0].keys()
+    assert readings[0]['station_type'] == 'ONSET'
 
-    transformed_readings = test_station.transform()
+    transformed_readings = test_station.transform(data=readings[1])
     assert len(transformed_readings.readings) > 0
     for value in transformed_readings.readings:
         assert isinstance(value.station_id, str)

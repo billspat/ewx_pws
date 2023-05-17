@@ -66,9 +66,12 @@ def test_zentra_readings(test_station):
     
     assert test_station.current_response is not None
     assert test_station.current_response.status_code == 200
-    assert readings is not None
+    assert type(readings) is list
+    assert len(readings) >= 2
+    assert 'station_type' in readings[0].keys()
+    assert readings[0]['station_type'] == 'ZENTRA'
 
-    transformed_readings = test_station.transform()
+    transformed_readings = test_station.transform(data=readings[1])
     assert len(transformed_readings.readings) > 0
     for value in transformed_readings.readings:
         assert isinstance(value.station_id, str)

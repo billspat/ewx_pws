@@ -154,33 +154,37 @@ class WeatherStation(ABC):
         return(dt.strftime('%Y-%m-%d %H:%M:%S'))
     
     # this is a separate method so that it may be overriden if necessary by sub-classes
-    def _format_response(self, api_response, start_datetime_str, end_datetime_str, request_time):
-        """ modify format of response for consistency and to add meta data.  """
+    def _add_metadata(self, api_response, start_datetime_str, end_datetime_str):
+        """ creates list with metadata in 0th position and api response in 1st position"""
          # TODO: add meta data to response so it can be identified for future diagnostics
-        reading_metadata = {
+         # TODO: make package version based on something not hard coded in here
+        
+        metadata = {
             "station_type": self.config.station_type,
-            "station_id": self.id,
+            "station_id": self.config.station_id,
             "timezone": self.config.tz, 
             "start_datetime": start_datetime_str,
             "end_datetime": end_datetime_str,
-            "request_time": request_time,
+            "response_datetime_utc1": self.request_datetime,
+            "response_count": 1,
             "package_version": '0.1'
         }
         
-        return [reading_metadata].append(api_response)
+        return [metadata, api_response]
         
     # user api method that has optional start & end times
-    def get_readings(self,start_datetime_str = None, end_datetime_str = None):
+    def get_readings(self, start_datetime_str = None, end_datetime_str = None, add_to=None):
         """prepare start/end times and other params generically and then call station-specific method with that.
         start_datetime_str: optional date time interpretable string in UTC time zone
         end_datetime_str: optional datetime interpretable string in UTC time zone.  If start_datetime_str is empty this is ignored 
+        add_to: option for list to be passed in already containing metadata to be added to
         """
         
         #TODO: !!! ensure all datetimes are UTC.  if we allow 'str' inputs for date time, can't enforce that
         # create a request_interval pydantic type that requires a datetime object with a timezone, and that timezone must be UTC
         
         # for meta-data
-        request_time = datetime.now(tz=timezone.utc)
+        self.request_datetime = datetime.utcnow()
         
         # the time delta in this method is abritrary but fits with the proposed data pipeline
         if not start_datetime_str:
@@ -209,11 +213,18 @@ class WeatherStation(ABC):
             raise e        
     
         # TODO add meta data in consistent way to response data for diagnostics    
-        response_data = json.loads(self.current_response.content)
-
-
-        # this is saved as a class attribute but returned for other processing 
-        return response_data
+        self.response_data = json.loads(self.current_response.content)
+        
+        # If there's nothing to add to, do standard metadata/response list creation
+        if add_to is None:
+            return self._add_metadata(self.response_data, start_datetime, end_datetime)
+        
+        # Otherwise add it, increase the count of responses supposed to be contained, 
+        # add this one's timestamp list, and return
+        add_to[0]['response_count'] += 1
+        add_to[0]['response_datetime_utc' + add_to[0]['response_count']] = self.request_datetime
+        add_to.append(self.response_data)
+        return add_to
     
     def transform(self, data = None):
         """

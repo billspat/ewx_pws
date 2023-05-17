@@ -52,10 +52,7 @@ class DavisStation(WeatherStation):
                                        'end-timestamp': end_timestamp,
                                        'api-signature': self.apisig}).prepare()
         
-        self.request_datetime = datetime.utcnow()
         self.current_response = Session().send(self.current_api_request)
-        
-        self.response_data = json.loads(self.current_response.content)
         return self.current_response
 
     def _compute_signature(self, t:int, start_timestamp:int, end_timestamp:int):

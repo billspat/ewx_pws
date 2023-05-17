@@ -16,6 +16,11 @@ def fake_station_class():
             
             response = requests.get(url)
             return response # self.empty_response 
+        def _transform(self, data = None):
+            # might want to make this get tested at some point, don't
+            # know how exactly it'd format to correct data? now just
+            # returns empty
+            return
         
     return(FakeStation)
 

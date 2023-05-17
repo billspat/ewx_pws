@@ -45,7 +45,6 @@ class ZentraStation(WeatherStation):
                                        'start_mrid': start_mrid,
                                        'end_mrid': end_mrid}).prepare()
         
-        self.request_datetime = datetime.utcnow()
         self.current_response = Session().send(self.current_api_request)
 
         # Handles the 1 request/60 second throttling error
@@ -58,8 +57,6 @@ class ZentraStation(WeatherStation):
             time.sleep(lockout + 1)
 
             return self._get_readings(start_datetime,end_datetime,start_mrid,end_mrid)
-        
-        self.response_data = json.loads(self.current_response.content)
 
         return(self.current_response)
 

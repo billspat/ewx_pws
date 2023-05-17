@@ -35,10 +35,11 @@ class RainwiseStation(WeatherStation):
         return(True)
 
     def _get_readings(self, start_datetime:datetime, end_datetime:datetime, 
-                      interval:int = 1):
+                      interval:int = 1, add_to = None):
         """
         Params are start time, end time, and interval.
-        Returns raw api response.
+        add_to: option for list to be passed in already containing metadata to be added to
+        Returns api response in a list with metadata
         """
         self.current_api_request = Request('GET',
                                url='http://api.rainwise.net/main/v1.5/registered/get-historical.php',
@@ -50,11 +51,9 @@ class RainwiseStation(WeatherStation):
                                        'interval': interval,
                                        'sdate': start_datetime,
                                        'edate': end_datetime}).prepare()
-        self.request_datetime = datetime.utcnow()
         self.current_response = Session().send(self.current_api_request)
+        return self.current_response
 
-        self.response_data = json.loads(self.current_response.content)
-        return(self.current_response)
 
     def _transform(self, data=None):
         """
