@@ -120,7 +120,7 @@ class OnsetStation(WeatherStation):
         self.current_response = Session().send(self.current_api_request)
         self.response_data = json.loads(self.current_response.content)
 
-        return(self.current_response)
+        return([self.current_response])
     
     def _transform(self, data=None):
         """

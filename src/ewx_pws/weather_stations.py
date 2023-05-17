@@ -154,7 +154,7 @@ class WeatherStation(ABC):
         return(dt.strftime('%Y-%m-%d %H:%M:%S'))
     
     # this is a separate method so that it may be overriden if necessary by sub-classes
-    def _add_metadata(self, api_response, start_datetime_str, end_datetime_str):
+    def _initialize_metadata(self, start_datetime, end_datetime):
         """ creates list with metadata in 0th position and api response in 1st position"""
          # TODO: add meta data to response so it can be identified for future diagnostics
          # TODO: make package version based on something not hard coded in here
@@ -163,14 +163,13 @@ class WeatherStation(ABC):
             "station_type": self.config.station_type,
             "station_id": self.config.station_id,
             "timezone": self.config.tz, 
-            "start_datetime": start_datetime_str,
-            "end_datetime": end_datetime_str,
-            "response_datetime_utc1": self.request_datetime,
-            "response_count": 1,
+            "start_datetime": start_datetime,
+            "end_datetime": end_datetime,
+            "response_count": 0,
             "package_version": '0.1'
         }
         
-        return [metadata, api_response]
+        return [metadata]
         
     # user api method that has optional start & end times
     def get_readings(self, start_datetime_str = None, end_datetime_str = None, add_to=None):
@@ -203,27 +202,35 @@ class WeatherStation(ABC):
         # TODO : some of these will return a list and not a single response due to how the APIs work. Hence we need 
         # a flexible way to accept that and still be able to pull the content out.   create "content" abstract method?
         try:
-            self.current_response = self._get_readings(
+            result = self._get_readings(
                 start_datetime = start_datetime,
                 end_datetime = end_datetime
             )
+            if len(result) > 1:
+                self.current_response = result[len(result)-1]
+                responses = []
+                for response in result:
+                    responses.append(response)
+            else:
+                self.current_response = result[0]
+                responses = [result[0]]
+        
+            self.response_data = [json.loads(self.current_response.content)]
 
         except Exception as e:
             print("Error getting reading from station {self.id}: {e}")
-            raise e        
-    
-        # TODO add meta data in consistent way to response data for diagnostics    
-        self.response_data = json.loads(self.current_response.content)
+            raise e
         
         # If there's nothing to add to, do standard metadata/response list creation
         if add_to is None:
-            return self._add_metadata(self.response_data, start_datetime, end_datetime)
+            add_to = self._initialize_metadata(start_datetime, end_datetime)
         
         # Otherwise add it, increase the count of responses supposed to be contained, 
         # add this one's timestamp list, and return
-        add_to[0]['response_count'] += 1
-        add_to[0]['response_datetime_utc' + add_to[0]['response_count']] = self.request_datetime
-        add_to.append(self.response_data)
+        for response in responses:
+            add_to[0]['response_count'] += 1
+            add_to[0]['response_datetime_utc' + str(add_to[0]['response_count'])] = self.request_datetime
+            add_to.append(json.loads(response.content))
         return add_to
     
     def transform(self, data = None):

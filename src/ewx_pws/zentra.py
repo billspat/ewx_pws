@@ -58,7 +58,7 @@ class ZentraStation(WeatherStation):
 
             return self._get_readings(start_datetime,end_datetime,start_mrid,end_mrid)
 
-        return(self.current_response)
+        return([self.current_response])
 
     def _transform(self, data = None):
         """

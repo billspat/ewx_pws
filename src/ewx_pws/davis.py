@@ -3,7 +3,7 @@
 import collections, hashlib, hmac
 import json,pytz, time
 from requests import Session, Request
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from pydantic import Field
 from ewx_pws.weather_stations import WeatherStationConfig, WeatherStationReading, WeatherStationReadings, WeatherStation, STATION_TYPE
@@ -32,28 +32,62 @@ class DavisStation(WeatherStation):
         
     def _check_config(self,start_datetime, end_datetime):
         return True
+    
+    def get_intervals(self, start_datetime:datetime, end_datetime:datetime):
+        """
+        Public for viewing of what potential time intervals would look like
+        Pass in start_datetime and end_datetime, if they're above 24hr apart,
+        get nice splits that Davis can handle well in an array of tuples.
+        """
+        secondsdiff = (end_datetime - start_datetime).total_seconds()
+        curr_start_date = start_datetime
+        splits = []
 
-    def _get_readings(self, start_datetime:int, end_datetime:int):
+        # 86400 seconds per interval
+        while secondsdiff > 0:
+            if secondsdiff > 86400:
+                splits.append((curr_start_date, curr_start_date + timedelta(seconds=86400)))
+                curr_start_date += timedelta(seconds=86400)
+                secondsdiff -= 86400
+            elif secondsdiff < 300:
+                # Makes sure there aren't any intervals too small for Davis which result in errors.
+                break
+            else:
+                splits.append((curr_start_date, curr_start_date + timedelta(seconds=secondsdiff)))
+                secondsdiff -= secondsdiff
+        return splits
+    
+    def _get_readings(self, start_datetime:datetime, end_datetime:datetime):
         """ 
         Builds, sends, and stores raw response from Davis API
         NOTE: Conversion from datetime to unix timestamp is done before the function, in
         """
-        t = int(datetime.now().timestamp())
-
-        start_timestamp=int(time.mktime(start_datetime.timetuple()))
-        end_timestamp=int(time.mktime(end_datetime.timetuple()))
-
-        self._compute_signature(t=t, start_timestamp=start_timestamp, end_timestamp=end_timestamp)
-        self.current_api_request = Request('GET',
-                               url='https://api.weatherlink.com/v2/historic/' + self.config.sn,
-                               params={'api-key': self.config.apikey,
-                                       't': t,
-                                       'start-timestamp': start_timestamp,
-                                       'end-timestamp': end_timestamp,
-                                       'api-signature': self.apisig}).prepare()
+        tsplits = self.get_intervals(start_datetime=start_datetime, end_datetime=end_datetime)\
         
-        self.current_response = Session().send(self.current_api_request)
-        return self.current_response
+        self.response_list = []
+        for tsplit in tsplits:
+            #print(tsplit[0].strftime('%Y/%m/%d, %H:%M:%S'),'        ',tsplit[1].strftime('%Y/%m/%d, %H:%M:%S'))
+            start_datetime = tsplit[0]
+            end_datetime = tsplit[1]
+
+            t = int(datetime.now().timestamp())
+
+            start_timestamp=int(time.mktime(start_datetime.timetuple()))
+            end_timestamp=int(time.mktime(end_datetime.timetuple()))
+
+            self._compute_signature(t=t, start_timestamp=start_timestamp, end_timestamp=end_timestamp)
+            self.current_api_request = Request('GET',
+                                url='https://api.weatherlink.com/v2/historic/' + self.config.sn,
+                                params={'api-key': self.config.apikey,
+                                        't': t,
+                                        'start-timestamp': start_timestamp,
+                                        'end-timestamp': end_timestamp,
+                                        'api-signature': self.apisig}).prepare()
+            
+            self.current_response = Session().send(self.current_api_request)
+            self.response_list.append(self.current_response)
+
+        return self.response_list
 
     def _compute_signature(self, t:int, start_timestamp:int, end_timestamp:int):
         """

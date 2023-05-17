@@ -49,7 +49,7 @@ def test_davis_class_instantiation_from_config(station_configs, station_type):
 def test_davis_readings(test_station):
     
     sdt="2022-12-01 19:00:00"
-    edt="2022-12-01 19:15:00" 
+    edt="2022-12-02 19:15:00" 
 
     # test with hard-coded time
     readings = test_station.get_readings(start_datetime_str=sdt,end_datetime_str=edt)
@@ -67,19 +67,20 @@ def test_davis_readings(test_station):
     assert 'station_type' in readings[0].keys()
     assert readings[0]['station_type'] == 'DAVIS'
 
-    transformed_readings = test_station.transform(data=readings[1])
-    assert len(transformed_readings.readings) > 0
-    for value in transformed_readings.readings:
-        assert isinstance(value.station_id, str)
-        assert isinstance(value.data_datetime, datetime)
-        assert isinstance(value.atemp, float)
-        assert isinstance(value.pcpn, float)
-        assert isinstance(value.relh, float)
+    for i in range(1,len(readings)):
+        transformed_reading = test_station.transform(data=readings[i])
+        assert len(transformed_reading.readings) > 0
+        for value in transformed_reading.readings:
+            assert isinstance(value.station_id, str)
+            assert isinstance(value.data_datetime, datetime)
+            assert isinstance(value.atemp, float)
+            assert isinstance(value.pcpn, float)
+            assert isinstance(value.relh, float)
 
-        # print (value.station_id, end=", ")
-        # print (value.request_datetime, end=", ")
-        # print (value.data_datetime, end=", ")
-        # print (value.atemp, end=", ")
-        # print (value.pcpn, end=", ")
-        # print (value.relh, end="\n")
+            # print (value.station_id, end=", ")
+            # print (value.request_datetime, end=", ")
+            # print (value.data_datetime, end=", ")
+            # print (value.atemp, end=", ")
+            # print (value.pcpn, end=", ")
+            # print (value.relh, end="\n")
     
