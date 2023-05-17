@@ -35,7 +35,7 @@ class RainwiseStation(WeatherStation):
         return(True)
 
     def _get_readings(self, start_datetime:datetime, end_datetime:datetime, 
-                      interval:int = 1, add_to = None):
+                      interval:int = 1):
         """
         Params are start time, end time, and interval.
         add_to: option for list to be passed in already containing metadata to be added to
