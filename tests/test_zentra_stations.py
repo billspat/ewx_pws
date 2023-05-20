@@ -71,18 +71,19 @@ def test_zentra_readings(test_station):
     assert 'station_type' in readings[0].keys()
     assert readings[0]['station_type'] == 'ZENTRA'
 
-    transformed_readings = test_station.transform(data=readings[1])
-    assert len(transformed_readings.readings) > 0
-    for value in transformed_readings.readings:
-        assert isinstance(value.station_id, str)
-        assert isinstance(value.data_datetime, datetime)
-        assert isinstance(value.atemp, float)
-        assert isinstance(value.pcpn, float)
-        assert isinstance(value.relh, float)
+    for i in range(1,len(readings)):
+        transformed_reading = test_station.transform(data=readings[i])
+        assert len(transformed_reading.readings) > 0
+        for value in transformed_reading.readings:
+            assert isinstance(value.station_id, str)
+            assert isinstance(value.data_datetime, datetime)
+            assert isinstance(value.atemp, float)
+            assert isinstance(value.pcpn, float)
+            assert isinstance(value.relh, float)
 
-        # print (value.station_id)
-        # print (value.request_datetime)
-        # print (value.data_datetime)
-        # print (value.atemp)
-        # print (value.pcpn)
-        # print (value.relh, end="\n")
+            # print (value.station_id, end=", ")
+            # print (value.request_datetime, end=", ")
+            # print (value.data_datetime, end=", ")
+            # print (value.atemp, end=", ")
+            # print (value.pcpn, end=", ")
+            # print (value.relh, end="\n")
