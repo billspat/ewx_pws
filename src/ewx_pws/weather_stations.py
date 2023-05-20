@@ -15,7 +15,7 @@ from typing import Literal
 
 # package local
 from ewx_pws.time_intervals import previous_fourteen_minute_period, previous_fifteen_minute_period, fifteen_minute_mark
-
+from importlib.metadata import version
 
 #############
 # GLOBALS and TYPE MODELS
@@ -166,7 +166,7 @@ class WeatherStation(ABC):
             "start_datetime": start_datetime,
             "end_datetime": end_datetime,
             "response_count": 0,
-            "package_version": '0.1'
+            "package_version": version('ewx_pws')
         }
         
         return [metadata]
