@@ -25,11 +25,19 @@ class ZentraStation(WeatherStation):
         return(cls(station_config))
 
     
-    def __init__(self,config:ZentraConfig):
-        self.retry_on_throttle : bool = False
+    def __init__(self,config:ZentraConfig, max_retries : int = 0):
+        self._max_retries : int = max_retries
         super().__init__(config)  
-        
-    def _check_config(self,start_datetime, end_datetime):
+
+    @property
+    def max_retries(self):
+        return self._max_retries
+
+    @max_retries.setter
+    def name(self, value: int):
+        self._max_retries = value
+
+    def _check_config(self):
         return True
     
     def _get_readings(self, start_datetime:datetime, end_datetime:datetime, start_mrid=None, end_mrid=None):
@@ -48,15 +56,20 @@ class ZentraStation(WeatherStation):
         self.current_response = Session().send(self.current_api_request)
 
         # Handles the 1 request/60 second throttling error
-        if self.current_response.status_code == 429 and self.retry_on_throttle == True:
-            
+        retry_counter = 0
+        while self.current_response.status_code == 429 and self.max_retries > 0:
+            retry_counter += 1
+            if retry_counter > self.max_retries:
+                err_message = f"Zentra timed out {self.max_retries} times"
+                raise RuntimeError(err_message) 
+
             lockout = int(self.current_response.text[self.current_response.text.find("Lock out expires in ")+20:self.current_response.text.find("Lock out expires in ")+22])
             
             print("Error received for too frequent attempts, retrying in {} seconds...".format(lockout+1))
 
             time.sleep(lockout + 1)
 
-            return self._get_readings(start_datetime,end_datetime,start_mrid,end_mrid)
+            self.current_response = Session().send(self.current_api_request)
 
         return([self.current_response])
 
