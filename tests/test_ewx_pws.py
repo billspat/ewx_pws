@@ -45,6 +45,56 @@ def fake_stations_file(fake_stations_list):
 
     return 
 
+@pytest.fixture
+def fake_blank_file():
+
+    csv_file = NamedTemporaryFile(mode = 'w+', suffix='.csv', delete=False)
+    csv_file_path = csv_file.name
+
+    csv_file.close()
+    
+    yield(csv_file_path)
+    
+    os.remove(csv_file_path)
+
+    return 
+
+@pytest.fixture
+def fake_invalid_file():
+
+    csv_file = NamedTemporaryFile(mode = 'w+', suffix='.csv', delete=False)
+    csv_file_path = csv_file.name
+
+    csv_file.write("This is not a csv that is set up, correctly, ,a, w\n")
+    csv_file.write("This is not , correctly, ,a , w\n")
+    csv_file.write("This ist a cs thatis set up, correctly, a, , w\n")
+
+    csv_file.close()
+    
+    yield(csv_file_path)
+    
+    os.remove(csv_file_path)
+
+    return 
+
+@pytest.fixture
+def fake_noncsv_file():
+
+    csv_file = NamedTemporaryFile(mode = 'w+', suffix='.csv', delete=False)
+    csv_file_path = csv_file.name
+
+    csv_file.write("This is not, a, csv\n")
+    csv_file.write("it is just a normal file, written with text possibly with\n")
+    csv_file.write("some commas scattered throughout but nothing special.\n")
+
+    csv_file.close()
+    
+    yield(csv_file_path)
+    
+    os.remove(csv_file_path)
+
+    return 
+
 def test_stations_from_env():
     stations = ewx_pws.stations_from_env()
     assert len(stations) > 0
@@ -86,7 +136,7 @@ def test_fake_stations_file(fake_stations_file):
 
 def test_stations_from_file(fake_stations_file):
     stations = ewx_pws.stations_from_file(fake_stations_file)
-    
+
     # TODO move this fixture
     station_fields = ['station_id', 'station_type', 'station_config']
     assert isinstance(stations, dict)
@@ -94,3 +144,16 @@ def test_stations_from_file(fake_stations_file):
         assert isinstance(stations[station], dict)
         assert station_fields == list(stations[station].keys())
 
+@pytest.mark.filterwarnings("ignore:emptycsv")
+def test_stations_from_file_blank(fake_blank_file):
+    stations = ewx_pws.stations_from_file(fake_blank_file)
+    
+    assert stations == None
+
+def test_stations_from_file_invalid(fake_invalid_file):
+    with pytest.raises(ValueError):
+        ewx_pws.stations_from_file(fake_invalid_file)
+
+def test_stations_from_file_noncsv(fake_noncsv_file):
+    with pytest.raises(TypeError):
+        ewx_pws.stations_from_file(fake_noncsv_file)
