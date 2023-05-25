@@ -1,7 +1,7 @@
 
 # ZENTRA WIP
 
-import json,pytz,time
+import json,pytz,time, logging
 from requests import Session, Request
 from datetime import datetime, timezone
 
@@ -65,7 +65,7 @@ class ZentraStation(WeatherStation):
 
             lockout = int(self.current_response.text[self.current_response.text.find("Lock out expires in ")+20:self.current_response.text.find("Lock out expires in ")+22])
             
-            print("Error received for too frequent attempts, retrying in {} seconds...".format(lockout+1))
+            logging.warning("Error received for too frequent attempts, retrying in {} seconds...".format(lockout+1))
 
             time.sleep(lockout + 1)
 

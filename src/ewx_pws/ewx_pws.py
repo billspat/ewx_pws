@@ -1,7 +1,7 @@
 """Main module."""
 
 
-import json, os,csv, warnings
+import json, os,csv, warnings, logging
 from datetime import datetime, timedelta
 from multiweatherapi import multiweatherapi
 from dotenv import load_dotenv
@@ -153,16 +153,16 @@ def stations_from_file(csv_file_path:str):
             for row in csvreader:
                 station_id = row['station_id']
                 # try
-                #print(station_id)
-                #print(row['station_config'] )
+                logging.debug(station_id)
+                logging.debug(row['station_config'] )
                 try:
                     row['station_config'] = json.loads(row['station_config'])
                 except ValueError as ex:
-                    print(("ValueError: Invalid json encountered reading in ewx_pws.py.stations_from_file {}:\n {}".format(csv_file_path, ex)))
+                    logging.error(("ValueError: Invalid json encountered reading in ewx_pws.py.stations_from_file {}:\n {}".format(csv_file_path, ex)))
                     raise ValueError
                 stations[station_id] = row
     except TypeError as ex:
-        print("TypeError: Exception encountered reading in ewx_pws.py.stations_from_file {}:\n {}".format(csv_file_path, ex))
+        logging.error("TypeError: Exception encountered reading in ewx_pws.py.stations_from_file {}:\n {}".format(csv_file_path, ex))
         raise ex
     
     return stations
@@ -182,7 +182,7 @@ def weather_station_factory(station_type:STATION_TYPE, config:dict) -> type[Weat
     try:
         station = _station_types[station_type](config)
     except Exception as e: 
-        print(f"could not create station type {station_type} from config: {e}")
+        logging.error(f"could not create station type {station_type} from config: {e}")
         raise e
     
     return station 
@@ -197,7 +197,7 @@ def validate_station_config(station_type:STATION_TYPE, station_config:dict)->boo
     try:
         test_station = weather_station_factory(station_type, station_config)
     except Exception as e:
-        print("station config error for {station_type}")
+        logging.error("station config error for {station_type}")
         return False    
     
     # attempt to get a sample reading and see what happens, return T if it works
@@ -206,7 +206,7 @@ def validate_station_config(station_type:STATION_TYPE, station_config:dict)->boo
         if r:
             return True
     except Exception as e:
-        print("could not get reading for station type {station_type} id {station.id}: {e}")
+        logging.error("could not get reading for station type {station_type} id {station.id}: {e}")
         return False
     # false here ==> config is incorrect OR station is offline, don't know which
 
@@ -215,3 +215,5 @@ def validate_station_config(station_type:STATION_TYPE, station_config:dict)->boo
 # station_list = [s for s in stations.values()]
 #  to get the first row in the dict of dict (for testing )
 # sd = stations[list(stations.keys())[0]]
+
+logging.basicConfig(level=logging.NOTSET, format='%(asctime)s-%(process)d-%(levelname)s-%(message)s')

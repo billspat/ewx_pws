@@ -1,7 +1,6 @@
 from ewx_pws.spectrum import SpectrumConfig, SpectrumStation, WeatherStationConfig, WeatherStation
-import pytest, re
+import pytest, re, logging
 from datetime import datetime
-from pprint import pprint
 
 # note: fixtures auto-imported from conftest.py
 
@@ -26,8 +25,7 @@ def test_spectrum_class_fake(fake_station_configs,station_type):
     
 def test_spectrum_class_instantiation_from_config(station_configs,station_type):
     config = station_configs[station_type]
-    print('config used:')
-    print(config)
+    logging.debug('config used: {}'.format(config))
     station = SpectrumStation.init_from_dict(config)
     assert isinstance(station, WeatherStation)
     assert isinstance(station.id, str)
@@ -43,11 +41,9 @@ def test_spectrum_readings(test_station):
     # test with hard-coded time
     readings = test_station.get_readings(start_datetime_str=sdt,end_datetime_str=edt)
 
-    # optional, print outputs for debug
+    # optional, log outputs for debug
     # use pytest -s to see this output
-    pprint(vars(test_station.current_response))
-    print('-----')
-    pprint(test_station.current_response.content)
+    logging.debug('{}\n-----\n{}'.format(vars(test_station.current_response), test_station.current_response.content))
         
     assert test_station.current_response is not None
     assert test_station.current_response.status_code == 200
@@ -66,9 +62,4 @@ def test_spectrum_readings(test_station):
             assert isinstance(value.pcpn, float)
             assert isinstance(value.relh, float)
 
-            # print (value.station_id, end=", ")
-            # print (value.request_datetime, end=", ")
-            # print (value.data_datetime, end=", ")
-            # print (value.atemp, end=", ")
-            # print (value.pcpn, end=", ")
-            # print (value.relh, end="\n")
+            #logging.debug('\n{}: {}, {}, {}, {}, {}\n'.format(value.station_id,value.request_datetime,value.data_datetime,value.atemp,value.pcpn,value.relh))

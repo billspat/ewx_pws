@@ -65,9 +65,9 @@ class OnsetStation(WeatherStation):
         otherwise cause a race condition with
         Raises Exception If the return code is not 200.
         """
-        # debug printing - enabling will spill secrets in the log! 
-        # print('client_id: \"{}\"'.format(self.config.client_id))
-        # print('client_secret: \"{}\"'.format(self.client_secret))
+        # debug logging - enabling will spill secrets in the log! 
+        # logging.debug('client_id: \"{}\"'.format(self.config.client_id))
+        # logging.debug('client_secret: \"{}\"'.format(self.client_secret))
 
         request = Request('POST',
                           url='https://webservice.hobolink.com/ws/auth/token',

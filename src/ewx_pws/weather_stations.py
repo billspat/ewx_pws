@@ -3,7 +3,7 @@
 
 # from multiweatherapi import multiweatherapi
 
-import requests, pytz, json, warnings
+import requests, pytz, json, warnings, logging
 from datetime import datetime, timedelta, timezone
 # from pytz import timezone
 from requests import Session, Request
@@ -137,7 +137,7 @@ class WeatherStation(ABC):
     def _get_readings(self,start_datetime:datetime, end_datetime:datetime):
         """create API request and return str of json"""
         # get auth
-        print(f" this would be a reading from {self.id} for {start_datetime} to {end_datetime}")
+        logging.info(f" this would be a reading from {self.id} for {start_datetime} to {end_datetime}")
         return self.empty_response
 
     @abstractmethod
@@ -218,7 +218,7 @@ class WeatherStation(ABC):
             self.response_data = [json.loads(self.current_response.content)]
 
         except Exception as e:
-            print("Error getting reading from station {self.id}: {e}")
+            logging.error("Error getting reading from station {self.id}: {e}")
             raise e
         
         # If there's nothing to add to, do standard metadata/response list creation

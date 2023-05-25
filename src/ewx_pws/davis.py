@@ -66,7 +66,6 @@ class DavisStation(WeatherStation):
         
         self.response_list = []
         for tsplit in tsplits:
-            #print(tsplit[0].strftime('%Y/%m/%d, %H:%M:%S'),'        ',tsplit[1].strftime('%Y/%m/%d, %H:%M:%S'))
             start_datetime = tsplit[0]
             end_datetime = tsplit[1]
 

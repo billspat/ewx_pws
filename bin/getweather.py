@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """Console script for ewx_pws."""
 import argparse
-import sys, os
+import sys, os, logging
 
 from ewx_pws import ewx_pws
 
@@ -19,14 +19,14 @@ def main():
     if os.path.exists(csvfile):
         # try
         stations =  ewx_pws.stations_from_file(csvfile)
-        print(f"file has {len(stations)} stations")
+        logging.info(f"File has {len(stations)} stations")
     else:
-        print(f"file not found {csvfile}")
+        logging.error(f"file not found {csvfile}")
         return(1)
     
     # get recent data for now (ignore start and end times)
     weather_data = ewx_pws.get_readings(stations)
-    print(weather_data)
+    logging.info(weather_data)
     return 0
 
 
