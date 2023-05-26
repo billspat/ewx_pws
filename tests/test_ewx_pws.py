@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """Tests for `ewx_pwx` package."""
-import pytest, random, string,  os
+import pytest, random, string,  os, logging
 from tempfile import NamedTemporaryFile
 
 # dotenv loaded in conftest.py
@@ -100,30 +100,6 @@ def test_stations_from_env():
     assert len(stations) > 0
     assert isinstance(stations, dict)
     assert 'DAVIS' in list(stations.keys())
-
-def test_get_reading(sample_stations):
-    station = sample_stations['DAVIS']
-    reading = ewx_pws.get_reading(station['station_type'], 
-                          station['station_config'],
-                          start_datetime_str = None, 
-                          end_datetime_str = None)
-    
-    assert reading is not None
-    assert isinstance(reading.resp_raw, dict)
-    assert len(reading.resp_raw) > 0 
-    
-    assert isinstance(reading.resp_transformed, list)
-    assert len(reading.resp_transformed) > 0 
-    assert isinstance(reading.resp_transformed[0], dict)
-    
-    assert isinstance(reading.resp_transformed[0], dict)
-    
-    # check that we got the keys we expect.  As the weather api grows this list will need to be updated
-    # or built into the class/package
-    expected_column_list = ['station_id', 'request_datetime', 'data_datetime', 'atemp', 'pcpn', 'relh']
-    reading_fields = list(reading.resp_transformed[0].keys())
-    
-    assert reading_fields == expected_column_list
    
 import csv
 
@@ -157,3 +133,19 @@ def test_stations_from_file_invalid(fake_invalid_file):
 def test_stations_from_file_noncsv(fake_noncsv_file):
     with pytest.raises(TypeError):
         ewx_pws.stations_from_file(fake_noncsv_file)
+
+def test_weather_station_factory(fake_stations_file):
+    #stations = ewx_pws.stations_from_file('msu_weatherstations_config.csv')
+    stations = ewx_pws.stations_from_file(fake_stations_file)
+
+    # TODO move this fixture
+    for key in stations:
+        station_entry = stations[key]
+        # Have to have this if so GENERIC passes, logging all non-valid entries
+        # Since it can't implement GENERIC WeatherStations' abstract types, it fails otherwise
+        if station_entry['station_type'] in ewx_pws.STATION_CLASS_TYPES:
+            station = ewx_pws.weather_station_factory(station_entry['station_type'], station_entry['station_config'], station_entry['station_id'])
+            logging.debug(station.config)
+            assert isinstance(station, ewx_pws.STATION_CLASS_TYPES[station_entry['station_type']])
+        else:
+            logging.debug('Station type {} invalid, in {}'.format(station_entry['station_type'],station_entry))

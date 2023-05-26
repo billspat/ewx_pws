@@ -4,8 +4,8 @@ from os import environ
 # from tempfile import NamedTemporaryFile
 from dotenv import load_dotenv
 load_dotenv()
-from ewx_pws.ewx_pws import STATION_TYPES
-# from ewx_pws.weather_stations import STATION_TYPE
+from ewx_pws.weather_stations import STATION_TYPE_LIST
+from ewx_pws.ewx_pws import logging
 
 
 @pytest.fixture
@@ -48,7 +48,7 @@ def fake_station_configs(fake_stations_list):
 @pytest.fixture
 def station_dict_from_env():
     """build a dictionary of stations from os environemt, each in generic config format"""
-    stations_available  = [s for s in STATION_TYPES if s.upper() in  environ.keys()]
+    stations_available  = [s for s in STATION_TYPE_LIST if s.upper() in  environ.keys()]
     stations = {}
     for station_name in stations_available:
         stations[station_name] = {

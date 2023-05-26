@@ -22,7 +22,8 @@ from importlib.metadata import version
 
 # station type type, like an enum
 STATION_TYPE = Literal['ZENTRA', 'ONSET', 'DAVIS', 'RAINWISE', 'SPECTRUM', 'GENERIC']  # generic type is a hack for testing
-
+STATION_TYPE_LIST = ['ZENTRA', 'ONSET', 'DAVIS', 'RAINWISE', 'SPECTRUM', 'GENERIC']
+        
 # temporary type used when starting to protype station classes,  not for actual use
 # WeatherStationConfig = dict
 
@@ -267,25 +268,3 @@ class WeatherStation(ABC):
     
 class WeatherStationReadings(BaseModel):
     readings: list[WeatherStationReading] = list()
-
-
-##################################
-# Placeholder unfinished classes #
-##################################
-
-########## DAVIS ############
-class DavisConfig(WeatherStationConfig):
-    station_type : STATION_TYPE = "DAVIS"   
-        
-class DavisStation(WeatherStation):
-    def __init__(self,config:WeatherStationConfig):
-        self.station_type = 'davis'
-        super().__init__(config)
-    
-    def _check_config(self):
-        warnings("not implemented")
-        return True
-    
-    def _get_readings(self,start_datetime:datetime, end_datetime:datetime):
-        warnings("not implemented")
-        return self.empty_response
