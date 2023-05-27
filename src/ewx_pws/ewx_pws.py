@@ -16,6 +16,7 @@ from ewx_pws.zentra import ZentraStation
 from ewx_pws.time_intervals import previous_fifteen_minute_period
 
 load_dotenv()
+logging.basicConfig(level=logging.NOTSET, format='%(asctime)s-%(process)d-%(levelname)s-%(message)s')
 
 STATION_CLASS_TYPES = {'ZENTRA': ZentraStation, 'ONSET': OnsetStation, 'DAVIS': DavisStation,'RAINWISE': RainwiseStation, 'SPECTRUM':SpectrumStation }
 
@@ -167,4 +168,3 @@ def validate_station_config(station_type:STATION_TYPE, station_config:dict)->boo
 #  to get the first row in the dict of dict (for testing )
 # sd = stations[list(stations.keys())[0]]
 
-logging.basicConfig(level=logging.NOTSET, format='%(asctime)s-%(process)d-%(levelname)s-%(message)s')
