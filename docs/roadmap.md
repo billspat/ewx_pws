@@ -49,6 +49,7 @@ for each type of station, create a new file for it, and add speciliazeConfig and
      - `_get_reading()` api methods to get JSON 
      - `_transform()` to convert to standardized record row format 
 
+
 Getting data process : 
     validate config and create class
     authenticate and create tokens if necessary
@@ -64,20 +65,96 @@ A way to accomplish that is to just attempt to create a station object from the 
     - if there is no reading we know that station is either offline OR config is incorrect. 
         - external manual check is to see if you can log-in to the portal and see the station
 
-**Data pipeline tools**
+**Package Improves**
+Data time handling 
+  - see 1/2 one branch date time, copy paste and delete branch
+  - issue #11
+  - come up with concrete things this will fix
+  - enforce UTC for all input dates
+  - each change of UTC to local and back. 
 
- - station 'factory' or dictionary the maps a string of station 'type' to the class that uses it
- - set the time interval to pull data from 
+Documentation
+ - review sphinx and markdown doc process
+ - add proper docstrings to all functions etc
+
+
+**LOCMOS stations**
+ - add new station type
+ - find documentation and attempt to use portal, get data
+ - create new station class to handle it
+ - will need to deal with fact that this station does not get all data types
+    - new property of StationClass
+        - what is function of that? when would we use it?  
+ - add to ewx_pws setup
+
+TESTS 
+ - tests for structured and raw data for ewx_pws
+ - test to show how to use.   
+
+
+#### ewx_pws_db module
+
+ - part of ewx_pws package
+ - contains classes that know how to save raw and tx data
+    - using classes so that we can have the same interface for testing ( e.g. just dump to stuff to files ) or for cloud/production (database, cloud storage)
+ - the database version of these classes manages database libs and interface (psycopg or SQLAlchemy) 
+ - the package should save equally to disk, output to screen, to various dbs
+ - save data to database managing overwrites, no duplicates
+ - station config uploaded to DB from EWX side, Airflow prefers text file for station list
+     - need method for reading station list from DB and saving as config file (CSV etc)
+
+ - class to save raw data
+    - knows how to add some raw data (that has embedded meta data) to a collection of raw data
+        - subclass for different types of storage (file folders, database, etc see below) 
+    - save is keyed on station id
+    - this could be a big list kept in memory (readings.append()), a folder structure, or cloud storage
+    - could be a database table with columns for meta data (station id, timestamps, response code), and a CHAR column that just holds a string version of the JSON (that makes the most sense to me)
+    - start with a folder that it gets saved to, naming readings in a way that they can be found again
+
+- class save_transformed
+    - knows how to append transformed tabular data to a data store
+            - subclass for different types of storage (csvs in file folders, append to csv file, database, etc see below) 
+            - subclasses would need different params to `__init__` (e.g. the database subclass would need connection string )
+
+    - needs to be able to write to the data store concurrently, so appending to  a single big CSV file it must knows how to wait if the file is locked)
+    - SQLite is an easy database choice, but again must wait if the file is locked by a concurrent process
+    - Postgresql -  on local computer, or created in the cloud
+    - note this is a separate class from save_raw so that they can be flexible, and because Tx data is tabular
+
+- Database setup
+    - install Postgresql on your computer and toy with these python classes to write to it.  
+    - Which python library to use?
+        - postgresql-only?  https://www.psycopg.org/
+        - multidatabase SQLAlchemy, flexible but complicated. Nice ORM
+        - I don't think we will ever use anything excpet for postgresql for this project
+
+#### Data pipeline tools
+
+ - DONE station 'factory' or dictionary the maps a string of station 'type' to the class that uses it
+
+ - create new wrapper function save_readings(stations, raw_data_saver, transformed_data_saver)
+
+    - calls get readings for each station
+    - checks for errors 
+    - saves raw and transformed using classes in ewx_pws_db module
+    - saves event log of when readings were taken to help track errors
+
+ - process to pull data using save_readings to set the time interval to pull data from 
  - setup the destination of the data (files take no setup, DB connection)
  - read in station list (with config) from CSV (done) or DB, and for each station
      - instantiate station object from station config
      - validate config 
-     - pull data for time interval
+     - start an on-going process that periodically:
+        - sets time interval
+        - pulls data for time interval
+        - saves data
+            - raw
+            - transformed
+ 
  - Checking for errors
      - detect if return value is error and hence empty
      - modify transformed data 
  - Validate weather data
- - split data between raw and transformed
  
  - aggregating data from multiple stations into single tabular data
  - add 'id' to download event to link transformed data row to API data output bundle
@@ -88,15 +165,7 @@ A way to accomplish that is to just attempt to create a station object from the 
  - Data summaries
      - via DB SQL
 
-#### ewx_pws_db
 
- - part of ewx_pws package
- - manages database libs and interface (SQLAlchemy)
- - the package should save equally to disk, output to screen, to various dbs
- - save data to database managing overwrites, no duplicates
- - station config uploaded to DB from EWX side, Airflow prefers text file for station list
-     - need method for reading station list from DB and saving as config file (CSV etc)
- - can read in data for station ID and/or time interval
  
 
 ### Readings Validation
