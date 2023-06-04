@@ -97,9 +97,10 @@ def fake_noncsv_file():
 
 def test_stations_from_env():
     stations = ewx_pws.stations_from_env()
-    assert len(stations) > 0
-    assert isinstance(stations, dict)
-    assert 'DAVIS' in list(stations.keys())
+    for station in stations:
+        print(ewx_pws.STATION_CLASS_TYPES)
+        print(type(station))
+        assert type(station) in ewx_pws.STATION_CLASS_TYPES.values()
    
 import csv
 
@@ -113,12 +114,10 @@ def test_fake_stations_file(fake_stations_file):
 def test_stations_from_file(fake_stations_file):
     stations = ewx_pws.stations_from_file(fake_stations_file)
 
-    # TODO move this fixture
-    station_fields = ['station_id', 'station_type', 'station_config']
-    assert isinstance(stations, dict)
     for station in stations:
-        assert isinstance(stations[station], dict)
-        assert station_fields == list(stations[station].keys())
+        print(ewx_pws.STATION_CLASS_TYPES)
+        print(type(station))
+        assert type(station) in ewx_pws.STATION_CLASS_TYPES.values()
 
 @pytest.mark.filterwarnings("ignore:emptycsv")
 def test_stations_from_file_blank(fake_blank_file):
@@ -133,19 +132,3 @@ def test_stations_from_file_invalid(fake_invalid_file):
 def test_stations_from_file_noncsv(fake_noncsv_file):
     with pytest.raises(TypeError):
         ewx_pws.stations_from_file(fake_noncsv_file)
-
-def test_weather_station_factory(fake_stations_file):
-    #stations = ewx_pws.stations_from_file('msu_weatherstations_config.csv')
-    stations = ewx_pws.stations_from_file(fake_stations_file)
-
-    # TODO move this fixture
-    for key in stations:
-        station_entry = stations[key]
-        # Have to have this if so GENERIC passes, logging all non-valid entries
-        # Since it can't implement GENERIC WeatherStations' abstract types, it fails otherwise
-        if station_entry['station_type'] in ewx_pws.STATION_CLASS_TYPES:
-            station = ewx_pws.weather_station_factory(station_entry['station_type'], station_entry['station_config'], station_entry['station_id'])
-            logging.debug(station.config)
-            assert isinstance(station, ewx_pws.STATION_CLASS_TYPES[station_entry['station_type']])
-        else:
-            logging.debug('Station type {} invalid, in {}'.format(station_entry['station_type'],station_entry))

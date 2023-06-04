@@ -20,7 +20,7 @@ logging.basicConfig(level=logging.NOTSET, format='%(asctime)s-%(process)d-%(leve
 
 STATION_CLASS_TYPES = {'ZENTRA': ZentraStation, 'ONSET': OnsetStation, 'DAVIS': DavisStation,'RAINWISE': RainwiseStation, 'SPECTRUM':SpectrumStation }
 
-def get_readings(stations:dict,
+def get_readings(stations:list,
                 start_datetime_str:str = None,
                 end_datetime_str:str = None,
                 transformed_only = True):
@@ -33,23 +33,21 @@ def get_readings(stations:dict,
     """
     try:
         readings = {}
-        for key in stations:
-            station_entry = stations[key]
-            station = weather_station_factory(station_entry['station_type'], station_entry['station_config'], station_entry['station_id'])
+        for station in stations:
             reading = station.get_readings(
                         station_type = station['station_type'], 
                         station_config = station['station_config'],
                         start_datetime_str = start_datetime_str,
                         end_datetime_str = end_datetime_str)
 
-            readings[key] =  { 
+            readings[station['station_id']] =  { 
                 'station_id' : station['station_id'], 'station_type' : station['station_type'],
                 'start': start_datetime_str,
                 'end':end_datetime_str,
                 'data' :  station.transform(data=reading)
             }
             if not transformed_only:
-                readings[key]['json'] = reading
+                readings[station['station_id']]['json'] = reading
     except Exception as e:
         logging.error('Could not collect readings with error {}'.format(e))
         
@@ -62,14 +60,21 @@ def stations_from_env():
     """ this is a temporary cludge to convert the old style dot env into new listing"""
     
     stations_available  = [s for s in STATION_TYPE_LIST if s.upper() in os.environ.keys()]
-    stations = {}
+    temp_stations = {}
     for station_name in stations_available:
-        stations[station_name] = {
+        temp_stations[station_name] = {
             "station_id"     : f"{station_name}_1",
             "station_type"   : station_name,
             "station_config" : json.loads(os.environ[station_name])
         }
-        
+
+    stations = []
+    for key in temp_stations:
+        station_entry = temp_stations[key]
+        if station_entry['station_type'] in STATION_CLASS_TYPES:
+            station = weather_station_factory(station_entry['station_type'], station_entry['station_config'], station_entry['station_id'])
+            stations.append(station)
+    
     return stations
 
 
@@ -84,7 +89,7 @@ def stations_from_file(csv_file_path:str):
             return None
         
         station_field_names = ["station_id", "station_type", "station_config"]
-        stations = {}
+        temp_stations = {}
         header = True
 
         # Checks for header, ID column, and ensures file isn't just empty
@@ -112,10 +117,17 @@ def stations_from_file(csv_file_path:str):
                 except ValueError as ex:
                     logging.error(("ValueError: Invalid json encountered reading in ewx_pws.py.stations_from_file {}:\n {}".format(csv_file_path, ex)))
                     raise ValueError
-                stations[station_id] = row
+                temp_stations[station_id] = row
     except TypeError as ex:
         logging.error("TypeError: Exception encountered reading in ewx_pws.py.stations_from_file {}:\n {}".format(csv_file_path, ex))
         raise ex
+    
+    stations = []
+    for key in temp_stations:
+        station_entry = temp_stations[key]
+        if station_entry['station_type'] in STATION_CLASS_TYPES:
+            station = weather_station_factory(station_entry['station_type'], station_entry['station_config'], station_entry['station_id'])
+            stations.append(station)
     
     return stations
 
