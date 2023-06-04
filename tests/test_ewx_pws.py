@@ -98,8 +98,6 @@ def fake_noncsv_file():
 def test_stations_from_env():
     stations = ewx_pws.stations_from_env()
     for station in stations:
-        print(ewx_pws.STATION_CLASS_TYPES)
-        print(type(station))
         assert type(station) in ewx_pws.STATION_CLASS_TYPES.values()
    
 import csv
@@ -115,8 +113,6 @@ def test_stations_from_file(fake_stations_file):
     stations = ewx_pws.stations_from_file(fake_stations_file)
 
     for station in stations:
-        print(ewx_pws.STATION_CLASS_TYPES)
-        print(type(station))
         assert type(station) in ewx_pws.STATION_CLASS_TYPES.values()
 
 @pytest.mark.filterwarnings("ignore:emptycsv")
