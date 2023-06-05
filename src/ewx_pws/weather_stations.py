@@ -43,7 +43,7 @@ class GenericConfig(WeatherStationConfig):
 
 class WeatherStationReading(BaseModel):
     station_id : str
-    request_datetime : datetime # UTC
+    transform_datetime : datetime # UTC
     data_datetime : datetime    # UTC
     atemp : float or None       # celsius 
     pcpn : float or None        # mm, > 0

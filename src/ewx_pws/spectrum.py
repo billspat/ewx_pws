@@ -68,7 +68,7 @@ class SpectrumStation(WeatherStation):
             return readings_list
         for record in data['EquipmentRecords']:
             temp = SpectrumReading(station_id=record['SerialNumber'],
-                            request_datetime=self.request_datetime,
+                            transform_datetime=datetime.utcnow(),
                             data_datetime=record['TimeStamp'],
                             atemp=round((record['SensorData'][1]["DecimalValue"] - 32) * 5 / 9, 2),
                             pcpn=round(record['SensorData'][0]["DecimalValue"] * 25.4, 2),
@@ -83,7 +83,7 @@ class SpectrumStation(WeatherStation):
 
 class SpectrumReading(WeatherStationReading):
     station_id : str
-    request_datetime : datetime or None = None # UTC
+    transform_datetime : datetime or None = None # UTC
     data_datetime : datetime           # UTC
     atemp : float or None = None       # celsius 
     pcpn : float or None = None        # mm, > 0

@@ -86,7 +86,7 @@ class ZentraStation(WeatherStation):
         
         # Build a ZentraReading object for each and put it into the readings_list
         for reading in data['data']['Air Temperature'][0]['readings']:
-            temp = ZentraReading(station_id=data['data']['Air Temperature'][0]['metadata']['device_name'],request_datetime=self.request_datetime, data_datetime=reading['timestamp_utc'])
+            temp = ZentraReading(station_id=data['data']['Air Temperature'][0]['metadata']['device_name'],transform_datetime=datetime.utcnow(), data_datetime=reading['timestamp_utc'])
             temp.atemp = reading['value']
             timestamp = reading['timestamp_utc']
             for reading2 in data['data']['Precipitation'][0]['readings']:
@@ -105,7 +105,7 @@ class ZentraStation(WeatherStation):
 
 class ZentraReading(WeatherStationReading):
     station_id : str
-    request_datetime : datetime or None = None # UTC
+    transform_datetime : datetime or None = None # UTC
     data_datetime : datetime           # UTC
     atemp : float or None = None       # celsius 
     pcpn : float or None = None        # mm, > 0

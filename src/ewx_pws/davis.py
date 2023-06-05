@@ -115,7 +115,7 @@ class DavisStation(WeatherStation):
             for record in lsid['data']:
                 if 'temp_out' in record.keys():
                     temp = DavisReading(station_id=data['station_id'],
-                                    request_datetime=self.request_datetime,
+                                    transform_datetime=datetime.utcnow(),
                                     data_datetime=datetime.utcfromtimestamp(record['ts']),
                                     atemp=round((record['ts'] - 32) * 5 / 9, 2),
                                     pcpn=round(record['rainfall_mm'] * 25.4, 2),
@@ -130,7 +130,7 @@ class DavisStation(WeatherStation):
 
 class DavisReading(WeatherStationReading):
         station_id : str
-        request_datetime : datetime or None = None # UTC
+        transform_datetime : datetime or None = None # UTC
         data_datetime : datetime           # UTC
         atemp : float or None = None       # celsius 
         pcpn : float or None = None        # mm, > 0

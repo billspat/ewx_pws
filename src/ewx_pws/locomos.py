@@ -94,7 +94,7 @@ class LocomosStation(WeatherStation):
                     humidity = result['value']
 
             temp = LocomosReading(station_id=data['station_id'],
-                                    request_datetime=datetime.utcnow(),
+                                    transform_datetime=datetime.utcnow(),
                                     data_datetime=datetime.fromtimestamp(timestamp / 1000),
                                     atemp=temp,
                                     pcpn=round(precip * 25.4, 2),
@@ -109,7 +109,7 @@ class LocomosStation(WeatherStation):
 
 class LocomosReading(WeatherStationReading):
     station_id : str
-    request_datetime : datetime or None = None # UTC
+    transform_datetime : datetime or None = None # UTC
     data_datetime : datetime           # UTC
     atemp : float or None = None       # celsius 
     pcpn : float or None = None        # mm, > 0

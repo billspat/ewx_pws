@@ -160,7 +160,7 @@ class OnsetStation(WeatherStation):
         # Putting that data into a WeatherStationsReading object in OnsetReading class format
         for timestamp in readinginfos:
             readings_list.readings.append(OnsetReading(station_id=station_sn,
-                                    request_datetime=self.request_datetime,
+                                    transform_datetime=datetime.utcnow(),
                                     data_datetime=datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S'),
                                     atemp=readinginfos[timestamp]['atemp'],
                                     pcpn=readinginfos[timestamp]['pcpn'],
@@ -174,7 +174,7 @@ class OnsetStation(WeatherStation):
 
 class OnsetReading(WeatherStationReading):
     station_id : str
-    request_datetime : datetime or None = None # UTC
+    transform_datetime : datetime or None = None # UTC
     data_datetime : datetime           # UTC
     atemp : float or None = None       # celsius 
     pcpn : float or None = None        # mm, > 0

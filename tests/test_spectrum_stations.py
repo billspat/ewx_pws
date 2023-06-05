@@ -62,4 +62,4 @@ def test_spectrum_readings(test_station):
             assert isinstance(value.pcpn, float)
             assert isinstance(value.relh, float)
 
-            #logging.debug('\n{}: {}, {}, {}, {}, {}\n'.format(value.station_id,value.request_datetime,value.data_datetime,value.atemp,value.pcpn,value.relh))
+            #logging.debug('\n{}: {}, {}, {}, {}, {}\n'.format(value.station_id,value.transform_datetime,value.data_datetime,value.atemp,value.pcpn,value.relh))
