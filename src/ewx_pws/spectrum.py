@@ -57,7 +57,7 @@ class SpectrumStation(WeatherStation):
         self.current_response = Session().send(self.current_api_request)
         return([self.current_response])
 
-    def _transform(self, data=None):
+    def _transform(self, data=None, request_datetime: datetime = None):
         """
         Transforms data into a standardized format and returns it as a WeatherStationReadings object.
         data param if left to default tries for self.response_data processing
@@ -68,7 +68,7 @@ class SpectrumStation(WeatherStation):
             return readings_list
         for record in data['EquipmentRecords']:
             temp = SpectrumReading(station_id=record['SerialNumber'],
-                            transform_datetime=datetime.utcnow(),
+                            request_datetime=request_datetime,
                             data_datetime=record['TimeStamp'],
                             atemp=round((record['SensorData'][1]["DecimalValue"] - 32) * 5 / 9, 2),
                             pcpn=round(record['SensorData'][0]["DecimalValue"] * 25.4, 2),
@@ -83,7 +83,7 @@ class SpectrumStation(WeatherStation):
 
 class SpectrumReading(WeatherStationReading):
     station_id : str
-    transform_datetime : datetime or None = None # UTC
+    request_datetime : datetime or None = None # UTC
     data_datetime : datetime           # UTC
     atemp : float or None = None       # celsius 
     pcpn : float or None = None        # mm, > 0

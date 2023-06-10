@@ -55,7 +55,7 @@ class RainwiseStation(WeatherStation):
         return [self.current_response]
 
 
-    def _transform(self, data=None):
+    def _transform(self, data=None, request_datetime: datetime = None):
         """
         Transforms data into a standardized format and returns it as a WeatherStationReadings object.
         data param if left to default tries for self.response_data processing
@@ -67,7 +67,7 @@ class RainwiseStation(WeatherStation):
             return readings_list
         for key in data['times']:
             temp = RainwiseReading(station_id=data['station_id'],
-                            transform_datetime=datetime.utcnow(),
+                            request_datetime=request_datetime,
                             data_datetime=data['times'][key],
                             atemp=round((float(data['temp'][key]) - 32) * 5/9, 2),
                             pcpn=round(float(data['precip'][key]) * 25.4, 2),
@@ -82,7 +82,7 @@ class RainwiseStation(WeatherStation):
 
 class RainwiseReading(WeatherStationReading):
     station_id : str
-    transform_datetime : datetime or None = None # UTC
+    request_datetime : datetime or None = None # UTC
     data_datetime : datetime           # UTC
     atemp : float or None = None       # celsius 
     pcpn : float or None = None        # mm, > 0

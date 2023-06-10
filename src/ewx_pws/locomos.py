@@ -63,7 +63,7 @@ class LocomosStation(WeatherStation):
         return [return_dict]
 
 
-    def _transform(self, data=None):
+    def _transform(self, data=None, request_datetime: datetime = None):
         """
         Transforms data into a standardized format and returns it as a WeatherStationReadings object.
         data param if left to default tries for self.response_data processing
@@ -94,7 +94,7 @@ class LocomosStation(WeatherStation):
                     humidity = result['value']
 
             temp = LocomosReading(station_id=data['station_id'],
-                                    transform_datetime=datetime.utcnow(),
+                                    request_datetime=request_datetime,
                                     data_datetime=datetime.fromtimestamp(timestamp / 1000),
                                     atemp=temp,
                                     pcpn=round(precip * 25.4, 2),
@@ -109,7 +109,7 @@ class LocomosStation(WeatherStation):
 
 class LocomosReading(WeatherStationReading):
     station_id : str
-    transform_datetime : datetime or None = None # UTC
+    request_datetime : datetime or None = None # UTC
     data_datetime : datetime           # UTC
     atemp : float or None = None       # celsius 
     pcpn : float or None = None        # mm, > 0

@@ -122,7 +122,7 @@ class OnsetStation(WeatherStation):
 
         return([self.current_response])
     
-    def _transform(self, data=None):
+    def _transform(self, data=None, request_datetime: datetime = None):
         """
         Transforms data into a standardized format and returns it as a WeatherStationReadings object.
         data param if left to default tries for self.response_data processing
@@ -160,7 +160,7 @@ class OnsetStation(WeatherStation):
         # Putting that data into a WeatherStationsReading object in OnsetReading class format
         for timestamp in readinginfos:
             readings_list.readings.append(OnsetReading(station_id=station_sn,
-                                    transform_datetime=datetime.utcnow(),
+                                    request_datetime=request_datetime,
                                     data_datetime=datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S'),
                                     atemp=readinginfos[timestamp]['atemp'],
                                     pcpn=readinginfos[timestamp]['pcpn'],
@@ -174,7 +174,7 @@ class OnsetStation(WeatherStation):
 
 class OnsetReading(WeatherStationReading):
     station_id : str
-    transform_datetime : datetime or None = None # UTC
+    request_datetime : datetime or None = None # UTC
     data_datetime : datetime           # UTC
     atemp : float or None = None       # celsius 
     pcpn : float or None = None        # mm, > 0

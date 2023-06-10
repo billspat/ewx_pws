@@ -43,7 +43,7 @@ class GenericConfig(WeatherStationConfig):
 
 class WeatherStationReading(BaseModel):
     station_id : str
-    transform_datetime : datetime # UTC
+    request_datetime : datetime # UTC
     data_datetime : datetime    # UTC
     atemp : float or None       # celsius 
     pcpn : float or None        # mm, > 0
@@ -242,7 +242,7 @@ class WeatherStation(ABC):
             add_to.append(response)
         return add_to
     
-    def transform(self, data = None):
+    def transform(self, data = None, request_datetime: datetime = None):
         """
         Transforms data and return it in a standardized format. 
         data: optional input used to load in data if transform of existing data dictionary is required.
@@ -250,7 +250,7 @@ class WeatherStation(ABC):
         if data is None:
             data = self.response_data
 
-        return self._transform(data)
+        return self._transform(data, request_datetime)
 
     def current_response_data(self):
         json.loads(self.current_response._content)
