@@ -21,8 +21,8 @@ from importlib.metadata import version
 # GLOBALS and TYPE MODELS
 
 # station type type, like an enum
-STATION_TYPE = Literal['ZENTRA', 'ONSET', 'DAVIS', 'RAINWISE', 'SPECTRUM', 'GENERIC']  # generic type is a hack for testing
-STATION_TYPE_LIST = ['ZENTRA', 'ONSET', 'DAVIS', 'RAINWISE', 'SPECTRUM', 'GENERIC']
+STATION_TYPE = Literal['ZENTRA', 'ONSET', 'DAVIS', 'RAINWISE', 'SPECTRUM', 'LOCOMOS', 'GENERIC']  # generic type is a hack for testing
+STATION_TYPE_LIST = ['ZENTRA', 'ONSET', 'DAVIS', 'RAINWISE', 'SPECTRUM', 'LOCOMOS', 'GENERIC']
         
 # temporary type used when starting to protype station classes,  not for actual use
 # WeatherStationConfig = dict
@@ -211,12 +211,20 @@ class WeatherStation(ABC):
                 self.current_response = result[len(result)-1]
                 responses = []
                 for response in result:
-                    responses.append(response)
+                    if isinstance(response, dict):
+                        responses.append(response)
+                    else:
+                        responses.append(json.loads(response.content))
             else:
                 self.current_response = result[0]
-                responses = [result[0]]
-        
-            self.response_data = [json.loads(self.current_response.content)]
+                if isinstance(self.current_response, dict):
+                    responses = [result[0]]
+                else:
+                    responses = [json.loads(result[0].content)]
+            if isinstance(self.current_response, dict):
+                self.response_data = self.current_response
+            else:
+                self.response_data = [json.loads(self.current_response.content)]
 
         except Exception as e:
             logging.error("Error getting reading from station {self.id}: {e}")
@@ -231,10 +239,10 @@ class WeatherStation(ABC):
         for response in responses:
             add_to[0]['response_count'] += 1
             add_to[0]['response_datetime_utc' + str(add_to[0]['response_count'])] = self.request_datetime
-            add_to.append(json.loads(response.content))
+            add_to.append(response)
         return add_to
     
-    def transform(self, data = None):
+    def transform(self, data = None, request_datetime: datetime = None):
         """
         Transforms data and return it in a standardized format. 
         data: optional input used to load in data if transform of existing data dictionary is required.
@@ -242,7 +250,7 @@ class WeatherStation(ABC):
         if data is None:
             data = self.response_data
 
-        return self._transform(data)
+        return self._transform(data, request_datetime)
 
     def current_response_data(self):
         json.loads(self.current_response._content)

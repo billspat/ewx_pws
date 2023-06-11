@@ -102,7 +102,7 @@ class DavisStation(WeatherStation):
             hashlib.sha256).hexdigest()
         return self.apisig
 
-    def _transform(self, data=None):
+    def _transform(self, data=None, request_datetime: datetime = None):
         """
         Transforms data into a standardized format and returns it as a WeatherStationReadings object.
         data param if left to default tries for self.response_data processing
@@ -115,7 +115,7 @@ class DavisStation(WeatherStation):
             for record in lsid['data']:
                 if 'temp_out' in record.keys():
                     temp = DavisReading(station_id=data['station_id'],
-                                    request_datetime=self.request_datetime,
+                                    request_datetime=request_datetime,
                                     data_datetime=datetime.utcfromtimestamp(record['ts']),
                                     atemp=round((record['ts'] - 32) * 5 / 9, 2),
                                     pcpn=round(record['rainfall_mm'] * 25.4, 2),

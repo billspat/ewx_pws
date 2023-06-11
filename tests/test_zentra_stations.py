@@ -68,7 +68,8 @@ def test_zentra_readings(test_station):
     assert readings[0]['station_type'] == 'ZENTRA'
 
     for i in range(1,len(readings)):
-        transformed_reading = test_station.transform(data=readings[i])
+        resp_datetime = readings[0]['response_datetime_utc' + str(i)]
+        transformed_reading = test_station.transform(data=readings[i], request_datetime=resp_datetime)
         assert len(transformed_reading.readings) > 0
         for value in transformed_reading.readings:
             assert isinstance(value.station_id, str)

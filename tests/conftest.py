@@ -25,6 +25,7 @@ def fake_stations_list():
         ['fake_spectrum','SPECTRUM','{"sn":"12345678","apikey":"c3a2f80786398e656b08677b7a511a59","tz":"ET"}'],
         ['fake_onset', 'ONSET','{"sn":"12345678","client_id":"Enviroweather_WS","client_secret":"75d2b7f58f5d0cac689f6b9716348bf264158ca9","ret_form":"JSON","user_id":"12345","sensor_sn":{"atemp":"21079936-1","pcpn":"21085496-1","relh":"21079936-2"},"tz":"ET"}'],
         ['fake_rainwise', 'RAINWISE','{"sid":"lc2M22K4G99pLgR4Gu09Xw35NulgZMc7","pid":"lc2M22K4G99pLgR4Gu09Xw35NulgZMc7","ret_form":"json","mac":"907592476392","username":"907592476392","tz":"ET"}'],
+        ['fake_locomos', 'LOCOMOS','{"token":"EIBF-aGJGzUaH0tTuvYtgzpCoHW88XS6PDF","id":"XmydER6iPF7VTixSX2JXQkPd", "tz":"ET"}'],
         ['fake_generic','GENERIC','{"sn":"fake", "tz":"ET"}']
     ]
   
