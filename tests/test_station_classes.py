@@ -47,4 +47,3 @@ def test_timezone_handling(fake_station_configs,fake_station_class):
     assert fake_station.dt_from_str("2022-12-01 19:00:00", pytz.utc) == datetime.datetime(2022,12,1,19,00,00,tzinfo=pytz.utc)
     assert fake_station.dt_from_str("2022-12-01 19:00:00") == datetime.datetime(2022,12,1,19,00,00,tzinfo=pytz.utc)
     assert fake_station.dt_from_str("2022-12-01 00:00:00", pytz.timezone('US/Eastern')) == datetime.datetime(2022,12,1,5,00,00,tzinfo=pytz.utc)
-    print(fake_station.dt_from_str("2022-12-01 00:00:00", pytz.timezone('US/Eastern')).timestamp())
