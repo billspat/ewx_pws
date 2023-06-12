@@ -1,4 +1,4 @@
-import time, json
+import time, json, pytz
 from requests import Session, Request
 from datetime import datetime, timezone
 
@@ -9,7 +9,7 @@ class LocomosConfig(WeatherStationConfig):
         station_type   : STATION_TYPE = 'LOCOMOS'
         token          : str # Device token
         id             : str # ID field on device webpage
-        tz             : str = 'ET'
+        tz             : str = 'US/Eastern'
 
 class LocomosStation(WeatherStation):
     """ config is RainwiseConfig type """
@@ -34,9 +34,9 @@ class LocomosStation(WeatherStation):
         Params are start time, end time.
         Returns api response in a list with metadata
         """
-
-        start_milliseconds=int(time.mktime(start_datetime.timetuple())) * 1000
-        end_milliseconds=int(time.mktime(end_datetime.timetuple())) * 1000
+        
+        start_milliseconds=int(start_datetime.timestamp() * 1000)
+        end_milliseconds=int(end_datetime.timestamp() * 1000)
 
         var_request = Request(method='GET',
                 url='https://industrial.api.ubidots.com/api/v2.0/devices/{}/variables/'.format(self.config.id), 
@@ -69,6 +69,7 @@ class LocomosStation(WeatherStation):
         data param if left to default tries for self.response_data processing
         """
         readings_list = WeatherStationReadings()
+        tz = pytz.timezone(self.tzlist[self.config.tz])
 
         results = data['data']
         if 'precip' not in results.keys() or 'humidity' not in results.keys() or 'temperature' not in results.keys():
@@ -95,7 +96,7 @@ class LocomosStation(WeatherStation):
 
             temp = LocomosReading(station_id=data['station_id'],
                                     request_datetime=request_datetime,
-                                    data_datetime=datetime.fromtimestamp(timestamp / 1000),
+                                    data_datetime=datetime.fromtimestamp(timestamp / 1000, tz).astimezone(pytz.utc),
                                     atemp=temp,
                                     pcpn=round(precip * 25.4, 2),
                                     relh=humidity)

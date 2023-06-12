@@ -38,7 +38,7 @@ def test_locomos_readings(test_station):
     edt="2023-03-21 15:15:00"  
 
     # test with hard-coded time
-    readings = test_station.get_readings(start_datetime_str=sdt,end_datetime_str=edt)
+    readings = test_station.get_readings(start_datetime=sdt,end_datetime=edt)
 
     # optional, log outputs for debug
     # use pytest -s to see this output

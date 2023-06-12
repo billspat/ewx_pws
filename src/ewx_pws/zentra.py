@@ -42,14 +42,13 @@ class ZentraStation(WeatherStation):
     
     def _get_readings(self, start_datetime:datetime, end_datetime:datetime, start_mrid=None, end_mrid=None):
         """ Builds, sends, and stores raw response from Zentra API"""
-
         self.current_api_request = Request('GET',
                                url='https://zentracloud.com/api/v3/get_readings',
                                headers={
                                    'Authorization': "Token " + self.config.token},
                                params={'device_sn': self.config.sn,
-                                       'start_date': start_datetime,
-                                       'end_date': end_datetime,
+                                       'start_date': start_datetime.astimezone(pytz.timezone(self.tzlist[self.config.tz])),
+                                       'end_date': end_datetime.astimezone(pytz.timezone(self.tzlist[self.config.tz])),
                                        'start_mrid': start_mrid,
                                        'end_mrid': end_mrid}).prepare()
         
@@ -86,7 +85,8 @@ class ZentraStation(WeatherStation):
         
         # Build a ZentraReading object for each and put it into the readings_list
         for reading in data['data']['Air Temperature'][0]['readings']:
-            temp = ZentraReading(station_id=data['data']['Air Temperature'][0]['metadata']['device_name'],request_datetime=request_datetime, data_datetime=reading['timestamp_utc'])
+            print(reading['timestamp_utc'])
+            temp = ZentraReading(station_id=data['data']['Air Temperature'][0]['metadata']['device_name'],request_datetime=request_datetime, data_datetime=pytz.utc.localize(datetime.fromtimestamp(reading['timestamp_utc'])))
             temp.atemp = reading['value']
             timestamp = reading['timestamp_utc']
             for reading2 in data['data']['Precipitation'][0]['readings']:

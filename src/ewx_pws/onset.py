@@ -1,6 +1,6 @@
 # ONSET ###################
 
-import json
+import json, pytz
 from dotenv import dotenv_values
 from requests import Session, Request
 from datetime import datetime, timezone
@@ -105,7 +105,7 @@ class OnsetStation(WeatherStation):
         """
             
         access_token = self._get_auth() 
-        
+            
         start_datetime_str = self._format_time(start_datetime)
         end_datetime_str = self._format_time(end_datetime)
             
@@ -116,8 +116,8 @@ class OnsetStation(WeatherStation):
                     'start_date_time': start_datetime_str,
                     'end_date_time': end_datetime_str}).prepare()
         
-        self.request_datetime = datetime.utcnow()
         self.current_response = Session().send(self.current_api_request)
+
         self.response_data = json.loads(self.current_response.content)
 
         return([self.current_response])
@@ -161,7 +161,7 @@ class OnsetStation(WeatherStation):
         for timestamp in readinginfos:
             readings_list.readings.append(OnsetReading(station_id=station_sn,
                                     request_datetime=request_datetime,
-                                    data_datetime=datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S'),
+                                    data_datetime=pytz.utc.localize(datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S')),
                                     atemp=readinginfos[timestamp]['atemp'],
                                     pcpn=readinginfos[timestamp]['pcpn'],
                                     relh=readinginfos[timestamp]['relh']))

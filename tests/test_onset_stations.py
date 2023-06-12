@@ -49,7 +49,7 @@ def test_onset_readings(test_station):
         assert key in test_station.config.sensor_sn
 
     # test with hard-coded time
-    readings = test_station.get_readings(start_datetime_str=sdt,end_datetime_str=edt)
+    readings = test_station.get_readings(start_datetime=sdt,end_datetime=edt)
 
     # optional, log outputs for debug
     # use pytest -s to see this output

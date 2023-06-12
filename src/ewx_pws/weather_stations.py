@@ -171,34 +171,42 @@ class WeatherStation(ABC):
         }
         
         return [metadata]
-        
+    
+    def dt_from_str(self, datetime_str: str, in_tz: timezone = None):
+        # Creates a UTC timezone aware datetime from a string and an optional timezone
+        # If a timezone is passed, UTC is still returned, just adjusted for the input being a different TZ
+        dt = datetime.fromisoformat(datetime_str)
+        if not in_tz:
+            return pytz.utc.localize(dt)
+        return in_tz.localize(dt).astimezone(pytz.utc)
+
     # user api method that has optional start & end times
-    def get_readings(self, start_datetime_str = None, end_datetime_str = None, add_to=None):
+    def get_readings(self, start_datetime : datetime or str = None, end_datetime : datetime or str = None, add_to=None):
         """prepare start/end times and other params generically and then call station-specific method with that.
-        start_datetime_str: optional date time interpretable string in UTC time zone
-        end_datetime_str: optional datetime interpretable string in UTC time zone.  If start_datetime_str is empty this is ignored 
+        start_datetime: optional date time or interpretable string in UTC time zone
+        end_datetime: optional datetime or interpretable string in UTC time zone.  If start_datetime_str is empty this is ignored 
         add_to: option for list to be passed in already containing metadata to be added to
         """
         
         #TODO: !!! ensure all datetimes are UTC.  if we allow 'str' inputs for date time, can't enforce that
         # create a request_interval pydantic type that requires a datetime object with a timezone, and that timezone must be UTC
         
+        # If strings are passed, convert them to UTC datetimes
+        if isinstance(start_datetime, str):
+            start_datetime = self.dt_from_str(start_datetime)
+        if isinstance(end_datetime, str):
+            end_datetime = self.dt_from_str(end_datetime)
+        
         # for meta-data
-        self.request_datetime = datetime.utcnow()
+        self.request_datetime = pytz.utc.localize(datetime.utcnow())
         
         # the time delta in this method is abritrary but fits with the proposed data pipeline
-        if not start_datetime_str:
+        if not start_datetime:
             # no start ?  Use the interval 15 minutees before present time.  see module for details.  Ignore end time if it's sent
-            start_datetime,end_datetime =  previous_fourteen_minute_period()
+            start_datetime, end_datetime =  previous_fourteen_minute_period()
         else:
-            # TODO use pendulum package to accept wider variety of date/time str formats
-            start_datetime = datetime.fromisoformat(start_datetime_str)
-            if not end_datetime_str:
-                # no end time, make end time 14 minutes from start time given.  
+            if not end_datetime: 
                 end_datetime = start_datetime + timedelta(minutes= 14)
-            else:
-                end_datetime = datetime.fromisoformat(end_datetime_str)
-        
 
         # TODO : some of these will return a list and not a single response due to how the APIs work. Hence we need 
         # a flexible way to accept that and still be able to pull the content out.   create "content" abstract method?

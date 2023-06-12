@@ -47,11 +47,11 @@ def test_davis_class_instantiation_from_config(station_configs, station_type):
       
 def test_davis_readings(test_station):
     
-    sdt="2022-12-01 19:00:00"
-    edt="2022-12-02 19:15:00" 
+    sdt=test_station.dt_from_str("2022-12-01 19:00:00")
+    edt=test_station.dt_from_str("2022-12-02 19:15:00")
 
     # test with hard-coded time
-    readings = test_station.get_readings(start_datetime_str=sdt,end_datetime_str=edt)
+    readings = test_station.get_readings(start_datetime=sdt,end_datetime=edt)
     
     # optional, log outputs for debug
     #use pytest -s to see this output

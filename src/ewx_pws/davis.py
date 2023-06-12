@@ -3,7 +3,7 @@
 import collections, hashlib, hmac
 import json,pytz, time
 from requests import Session, Request
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 from pydantic import Field
 from ewx_pws.weather_stations import WeatherStationConfig, WeatherStationReading, WeatherStationReadings, WeatherStation, STATION_TYPE
@@ -14,7 +14,7 @@ class DavisConfig(WeatherStationConfig):
         sn             : str #  The serial number of the device.
         apikey         : str # The user's API access key. 
         apisec         : str # API security that is used to compute the hash.
-        tz             : str = 'ET' #  The time zone.  Defaults to Eastern Time.
+        tz             : str = 'US/Eastern' #  The time zone.  Defaults to Eastern Time.
 
 class DavisStation(WeatherStation):
     @classmethod
@@ -62,17 +62,17 @@ class DavisStation(WeatherStation):
         Builds, sends, and stores raw response from Davis API
         NOTE: Conversion from datetime to unix timestamp is done before the function, in
         """
-        tsplits = self.get_intervals(start_datetime=start_datetime, end_datetime=end_datetime)\
+        tsplits = self.get_intervals(start_datetime=start_datetime, end_datetime=end_datetime)
         
         self.response_list = []
         for tsplit in tsplits:
             start_datetime = tsplit[0]
             end_datetime = tsplit[1]
+            now = pytz.utc.localize(datetime.utcnow())
+            t = int(now.timestamp())
 
-            t = int(datetime.now().timestamp())
-
-            start_timestamp=int(time.mktime(start_datetime.timetuple()))
-            end_timestamp=int(time.mktime(end_datetime.timetuple()))
+            start_timestamp=int(start_datetime.timestamp())
+            end_timestamp=int(end_datetime.timestamp())
 
             self._compute_signature(t=t, start_timestamp=start_timestamp, end_timestamp=end_timestamp)
             self.current_api_request = Request('GET',
@@ -116,7 +116,7 @@ class DavisStation(WeatherStation):
                 if 'temp_out' in record.keys():
                     temp = DavisReading(station_id=data['station_id'],
                                     request_datetime=request_datetime,
-                                    data_datetime=datetime.utcfromtimestamp(record['ts']),
+                                    data_datetime=pytz.utc.localize(datetime.utcfromtimestamp(record['ts'])),
                                     atemp=round((record['ts'] - 32) * 5 / 9, 2),
                                     pcpn=round(record['rainfall_mm'] * 25.4, 2),
                                     relh=round(record['hum_out'], 2))
