@@ -55,7 +55,7 @@ class SpectrumStation(WeatherStation):
                                    params={'customerApiKey': self.config.apikey, 'serialNumber': self.config.sn,
                                            'startDate': start_datetime_str, 'endDate': end_datetime_str}).prepare()
         self.current_response = Session().send(self.current_api_request)
-        return([self.current_response])
+        return([json.loads(self.current_response.content)])
 
     def _transform(self, data=None, request_datetime: datetime = None):
         """

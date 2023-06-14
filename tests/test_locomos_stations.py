@@ -45,7 +45,6 @@ def test_locomos_readings(test_station):
     # use pytest -s to see this output
     logging.debug('{}\n'.format(test_station.current_response))
         
-    assert test_station.current_response is not None
     assert type(readings) is list
     assert len(readings) >= 2
     assert 'station_type' in readings[0].keys()

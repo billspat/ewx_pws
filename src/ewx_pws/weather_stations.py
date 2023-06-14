@@ -224,31 +224,18 @@ class WeatherStation(ABC):
             if not end_datetime: 
                 end_datetime = start_datetime + timedelta(minutes= 14)
 
-        # TODO : some of these will return a list and not a single response due to how the APIs work. Hence we need 
-        # a flexible way to accept that and still be able to pull the content out.   create "content" abstract method?
+        responses = []
         try:
             result = self._get_readings(
                 start_datetime = start_datetime,
                 end_datetime = end_datetime
             )
             if len(result) > 1:
-                self.current_response = result[len(result)-1]
-                responses = []
                 for response in result:
-                    if isinstance(response, dict):
-                        responses.append(response)
-                    else:
-                        responses.append(json.loads(response.content))
+                    responses.append(response)
             else:
-                self.current_response = result[0]
-                if isinstance(self.current_response, dict):
-                    responses = [result[0]]
-                else:
-                    responses = [json.loads(result[0].content)]
-            if isinstance(self.current_response, dict):
-                self.response_data = self.current_response
-            else:
-                self.response_data = [json.loads(self.current_response.content)]
+                responses = [result[0]]
+            self.response_data = self.current_response
 
         except Exception as e:
             logging.error("Error getting reading from station {self.id}: {e}")

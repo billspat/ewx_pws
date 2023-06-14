@@ -52,7 +52,7 @@ class RainwiseStation(WeatherStation):
                                        'sdate': start_datetime,
                                        'edate': end_datetime}).prepare()
         self.current_response = Session().send(self.current_api_request)
-        return [self.current_response]
+        return [json.loads(self.current_response.content)]
 
 
     def _transform(self, data=None, request_datetime: datetime = None):

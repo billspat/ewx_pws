@@ -84,7 +84,7 @@ class DavisStation(WeatherStation):
                                         'api-signature': self.apisig}).prepare()
             
             self.current_response = Session().send(self.current_api_request)
-            self.response_list.append(self.current_response)
+            self.response_list.append(json.loads(self.current_response.content))
 
         return self.response_list
 
