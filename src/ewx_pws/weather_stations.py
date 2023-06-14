@@ -10,7 +10,7 @@ from requests import Session, Request
 
 # typing and Pydantic 
 from abc import ABC, abstractmethod
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError, validator
 from typing import Literal
 
 # package local
@@ -33,7 +33,11 @@ class WeatherStationConfig(BaseModel):
     station_id : str 
     station_type : STATION_TYPE = "GENERIC"
     tz : str = "ET" # Field(description="time zone where the station is located")  # TODO create a timezone literal type
-    
+
+    @validator('tz')
+    def validTZMapping(cls, v):
+        assert v in ['HT','AT','PT','MT','CT','ET'] 
+        return v
 
 class GenericConfig(WeatherStationConfig):
     """This configuration is used for testing, dev and for base class.  Station specific config is simply stored

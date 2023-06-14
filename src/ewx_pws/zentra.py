@@ -85,7 +85,6 @@ class ZentraStation(WeatherStation):
         
         # Build a ZentraReading object for each and put it into the readings_list
         for reading in data['data']['Air Temperature'][0]['readings']:
-            print(reading['timestamp_utc'])
             temp = ZentraReading(station_id=data['data']['Air Temperature'][0]['metadata']['device_name'],request_datetime=request_datetime, data_datetime=pytz.utc.localize(datetime.fromtimestamp(reading['timestamp_utc'])))
             temp.atemp = reading['value']
             timestamp = reading['timestamp_utc']
