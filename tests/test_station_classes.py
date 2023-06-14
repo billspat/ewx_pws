@@ -1,6 +1,6 @@
-from ewx_pws.weather_stations import  WeatherStationConfig, WeatherStation
+from ewx_pws.weather_stations import  WeatherStationConfig, WeatherStation, datetimeUTC
+from pydantic import ValidationError
 import requests
-
 import pytest, json, pytz, datetime
 
 @pytest.fixture
@@ -40,10 +40,10 @@ def test_can_instantiate_from_dict(fake_station_configs,fake_station_class):
 
     # test parent methods that call abstract methods
     assert fake_station._check_config() == True
-    assert isinstance(fake_station.get_readings(), list)
 
-def test_timezone_handling(fake_station_configs,fake_station_class):
-    fake_station = fake_station_class.init_from_dict(fake_station_configs['GENERIC'])
-    assert fake_station.dt_from_str("2022-12-01 19:00:00", pytz.utc) == datetime.datetime(2022,12,1,19,00,00,tzinfo=pytz.utc)
-    assert fake_station.dt_from_str("2022-12-01 19:00:00") == datetime.datetime(2022,12,1,19,00,00,tzinfo=pytz.utc)
-    assert fake_station.dt_from_str("2022-12-01 00:00:00", pytz.timezone('US/Eastern')) == datetime.datetime(2022,12,1,5,00,00,tzinfo=pytz.utc)
+def test_utc_datetimes():
+    assert datetimeUTC(value=datetime.datetime(2022,10,10,15,25,0,tzinfo=pytz.utc))
+    with pytest.raises(ValidationError):
+        est = datetimeUTC(value=datetime.datetime(2022,10,10,15,25,0,tzinfo=pytz.timezone('US/Eastern')))
+    with pytest.raises(ValidationError):
+        naive = datetimeUTC(value=datetime.datetime(2022,10,10,15,25,0))

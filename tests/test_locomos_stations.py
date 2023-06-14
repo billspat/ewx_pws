@@ -1,4 +1,5 @@
 from ewx_pws.locomos import LocomosConfig, LocomosStation, WeatherStationConfig, WeatherStation
+from ewx_pws.weather_stations import datetimeUTC
 import pytest, logging
 from datetime import datetime
 
@@ -34,8 +35,8 @@ def test_locomos_readings(test_station):
     # note as of 2023-03-26 the test best Locomos station is offline
     # use hard-coded date/time when it was on line for this test
     # TODO remove these when the station is back on-line
-    sdt="2023-03-21 15:00:00"
-    edt="2023-03-21 15:15:00"  
+    sdt=test_station.dt_utc_from_str("2023-03-21 15:00:00")
+    edt=test_station.dt_utc_from_str("2023-03-21 15:15:00" ) 
 
     # test with hard-coded time
     readings = test_station.get_readings(start_datetime=sdt,end_datetime=edt)
@@ -51,7 +52,7 @@ def test_locomos_readings(test_station):
     assert readings[0]['station_type'] == 'LOCOMOS'
 
     for i in range(1,len(readings)):
-        resp_datetime = readings[0]['response_datetime_utc' + str(i)]
+        resp_datetime = datetimeUTC(value=readings[0]['response_datetime_utc' + str(i)])
         transformed_reading = test_station.transform(data=readings[i], request_datetime=resp_datetime)
         assert len(transformed_reading.readings) > 0
         for value in transformed_reading.readings:

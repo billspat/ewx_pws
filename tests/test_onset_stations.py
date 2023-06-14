@@ -1,4 +1,5 @@
 from ewx_pws.onset import OnsetConfig, OnsetStation, WeatherStationConfig, WeatherStation
+from ewx_pws.weather_stations import datetimeUTC
 import pytest, re, logging
 from datetime import datetime
 
@@ -42,8 +43,8 @@ def test_onset_readings(test_station):
     # note as of 2023-03-26 the test best onset station is offline
     # use hard-coded date/time when it was on line for this test
     # TODO remove these when the station is back on-line
-    sdt="2022-12-01 19:00:00"
-    edt="2022-12-01 19:15:00"  
+    sdt=test_station.dt_utc_from_str("2022-12-01 19:00:00")
+    edt=test_station.dt_utc_from_str("2022-12-01 19:15:00")
 
     for key in ['atemp', 'pcpn', 'relh']:
         assert key in test_station.config.sensor_sn
@@ -63,7 +64,7 @@ def test_onset_readings(test_station):
     assert readings[0]['station_type'] == 'ONSET'
     
     for i in range(1,len(readings)):
-        resp_datetime = readings[0]['response_datetime_utc' + str(i)]
+        resp_datetime = datetimeUTC(value=readings[0]['response_datetime_utc' + str(i)])
         transformed_reading = test_station.transform(data=readings[i], request_datetime=resp_datetime)
         assert len(transformed_reading.readings) > 0
         for value in transformed_reading.readings:

@@ -45,6 +45,13 @@ class GenericConfig(WeatherStationConfig):
     config:dict = {}
 
 
+class datetimeUTC(BaseModel):
+    value: datetime # Needs to be UTC
+    @validator('value')
+    def check_datetime_utc(cls, d):
+        assert d.tzinfo == pytz.utc
+        return d
+
 class WeatherStationReading(BaseModel):
     station_id : str
     request_datetime : datetime # UTC
@@ -176,31 +183,36 @@ class WeatherStation(ABC):
         
         return [metadata]
     
-    def dt_from_str(self, datetime_str: str, in_tz: timezone = None):
+    def dt_utc_from_str(self, datetime_str: str, in_tz: timezone = None):
         # Creates a UTC timezone aware datetime from a string and an optional timezone
         # If a timezone is passed, UTC is still returned, just adjusted for the input being a different TZ
         dt = datetime.fromisoformat(datetime_str)
         if not in_tz:
-            return pytz.utc.localize(dt)
-        return in_tz.localize(dt).astimezone(pytz.utc)
+            return datetimeUTC(value=pytz.utc.localize(dt))
+        return datetimeUTC(value=in_tz.localize(dt).astimezone(pytz.utc))
 
+    def get_readings_local(self, start_datetime : datetime, end_datetime : datetime, tz : str, add_to=None):
+        start_datetime=datetimeUTC(value=pytz.timezone(tz).localize(start_datetime).astimezone(pytz.utc))
+        end_datetime=datetimeUTC(value=pytz.timezone(tz).localize(end_datetime).astimezone(pytz.utc))
+        return self.get_readings(start_datetime=start_datetime,
+                                 end_datetime=end_datetime,
+                                 add_to=add_to)
+    
     # user api method that has optional start & end times
-    def get_readings(self, start_datetime : datetime or str = None, end_datetime : datetime or str = None, add_to=None):
+    def get_readings(self, start_datetime : datetimeUTC, end_datetime : datetimeUTC, add_to=None):
         """prepare start/end times and other params generically and then call station-specific method with that.
-        start_datetime: optional date time or interpretable string in UTC time zone
-        end_datetime: optional datetime or interpretable string in UTC time zone.  If start_datetime_str is empty this is ignored 
+        start_datetime: date time in UTC time zone
+        end_datetime: date time in UTC time zone.  If start_datetime is empty this is ignored 
         add_to: option for list to be passed in already containing metadata to be added to
         """
         
         #TODO: !!! ensure all datetimes are UTC.  if we allow 'str' inputs for date time, can't enforce that
         # create a request_interval pydantic type that requires a datetime object with a timezone, and that timezone must be UTC
-        
-        # If strings are passed, convert them to UTC datetimes
-        if isinstance(start_datetime, str):
-            start_datetime = self.dt_from_str(start_datetime)
-        if isinstance(end_datetime, str):
-            end_datetime = self.dt_from_str(end_datetime)
-        
+
+        # Unwrap classes for easier access
+        assert isinstance(start_datetime, datetimeUTC) and isinstance(end_datetime, datetimeUTC)
+        start_datetime = start_datetime.value
+        end_datetime = end_datetime.value
         # for meta-data
         self.request_datetime = pytz.utc.localize(datetime.utcnow())
         
@@ -254,11 +266,14 @@ class WeatherStation(ABC):
             add_to.append(response)
         return add_to
     
-    def transform(self, data = None, request_datetime: datetime = None):
+    def transform(self, data = None, request_datetime: datetimeUTC = None):
         """
         Transforms data and return it in a standardized format. 
         data: optional input used to load in data if transform of existing data dictionary is required.
         """
+        # Unwraps once it has been checked to be UTC
+        assert isinstance(request_datetime, datetimeUTC)
+        request_datetime = request_datetime.value
         if data is None:
             data = self.response_data
 
