@@ -23,22 +23,43 @@ from importlib.metadata import version
 # station type type, like an enum
 STATION_TYPE = Literal['ZENTRA', 'ONSET', 'DAVIS', 'RAINWISE', 'SPECTRUM', 'LOCOMOS', 'GENERIC']  # generic type is a hack for testing
 STATION_TYPE_LIST = ['ZENTRA', 'ONSET', 'DAVIS', 'RAINWISE', 'SPECTRUM', 'LOCOMOS', 'GENERIC']
-        
-# temporary type used when starting to protype station classes,  not for actual use
-# WeatherStationConfig = dict
+TIMEZONE_CODE = Literal['HT','AT','PT','MT','CT','ET']        
+TIMEZONE_CODE_LIST = {
+            'HT': 'US/Hawaii',
+            'AT': 'US/Alaska',
+            'PT': 'US/Pacific',
+            'MT': 'US/Mountain',
+            'CT': 'US/Central',
+            'ET': 'US/Eastern'
+        }
 
 class WeatherStationConfig(BaseModel):
-    """Base station configuration, includes common meta-data config common to all station types. 
-    Station-specifc config """
+    """Base station configuration, includes common meta-data config common to all station types.  Must include a valid US Timezone 
+    Station-specifc config.  """
     station_id : str 
     station_type : STATION_TYPE = "GENERIC"
-    tz : str = "ET" # Field(description="time zone where the station is located")  # TODO create a timezone literal type
+    tz : TIMEZONE_CODE = Field(default='ET', description="US two-character time zone of the station location ( 'HT','AT','PT','MT','CT','ET')") 
+    _tzlist: dict[str:str] = {
+            'HT': 'US/Hawaii',
+            'AT': 'US/Alaska',
+            'PT': 'US/Pacific',
+            'MT': 'US/Mountain',
+            'CT': 'US/Central',
+            'ET': 'US/Eastern'
+            }
+    
+    def pytz(self):
+        """return valide python timezone from 2-char timezone code in config 
+        for use in datetime module
+        """
+        return(self._tzlist[self.tz])
 
-    @validator('tz')
-    def validTZMapping(cls, v):
-        assert v in ['HT','AT','PT','MT','CT','ET'] 
-        return v
+    class Config:
+        """ allow private member for timezone conversion"""
+        underscore_attrs_are_private = True
 
+
+# ws = WeatherStationConfig.parse_obj( {'station_id' : 'fakestation', 'station_type' : "GENERIC", 'tz' : "ET" })
 class GenericConfig(WeatherStationConfig):
     """This configuration is used for testing, dev and for base class.  Station specific config is simply stored
     in a dictionary"""
@@ -67,16 +88,6 @@ class WeatherStationReading(BaseModel):
 
 class WeatherStation(ABC):
     """abstract base class for a weather station to access it's API and retrieve data"""
-
-    # class globals
-    tzlist = {
-            'HT': 'US/Hawaii',
-            'AT': 'US/Alaska',
-            'PT': 'US/Pacific',
-            'MT': 'US/Mountain',
-            'CT': 'US/Central',
-            'ET': 'US/Eastern'
-        }
     
     # used by subclasses as default when there is no data from station
     empty_response = ['{}']

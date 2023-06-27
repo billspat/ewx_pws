@@ -29,6 +29,7 @@ class SpectrumStation(WeatherStation):
     def _check_config(self,start_datetime, end_datetime):
         return True
     
+    #TODO require this dt sent to this method is UTC tz
     def _format_time(self, dt:datetime)->str:
         """
         format date/time parameter for specconnect API request
@@ -37,12 +38,11 @@ class SpectrumStation(WeatherStation):
         '%m-%d-%Y %H:%M'
         """
         
-        # if dt has a time zone
+        # convert UTC date to timezone of station for request
+        # use the converter in config obj to get python-friendly tz string
+        dt = dt.replace(tzinfo=timezone.utc).astimezone(pytz.timezone(self.config.pytz()))
         
-        dt = dt.replace(tzinfo=timezone.utc).astimezone(pytz.timezone(self.tzlist[self.config.tz]))
-        # convert to ET
-        
-        # otherwise assume it's UTC. 
+ 
         return(dt.strftime('%m-%d-%Y %H:%M'))
     
     def _get_readings(self,start_datetime:datetime, end_datetime:datetime):
@@ -69,7 +69,8 @@ class SpectrumStation(WeatherStation):
         for record in data['EquipmentRecords']:
             temp = SpectrumReading(station_id=record['SerialNumber'],
                             request_datetime=request_datetime,
-                            data_datetime=self.dt_utc_from_str(record['TimeStamp'], pytz.timezone(self.tzlist[self.config.tz])).value,
+                            data_datetime=self.dt_utc_from_str(record['TimeStamp'], 
+                                                                pytz.timezone(self.config.pytz())).value,
                             atemp=round((record['SensorData'][1]["DecimalValue"] - 32) * 5 / 9, 2),
                             pcpn=round(record['SensorData'][0]["DecimalValue"] * 25.4, 2),
                             relh=round(record['SensorData'][2]["DecimalValue"], 2))

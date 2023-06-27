@@ -47,8 +47,8 @@ class ZentraStation(WeatherStation):
                                headers={
                                    'Authorization': "Token " + self.config.token},
                                params={'device_sn': self.config.sn,
-                                       'start_date': start_datetime.astimezone(pytz.timezone(self.tzlist[self.config.tz])),
-                                       'end_date': end_datetime.astimezone(pytz.timezone(self.tzlist[self.config.tz])),
+                                       'start_date': start_datetime.astimezone(pytz.timezone(self.config.pytz())),
+                                       'end_date': end_datetime.astimezone(pytz.timezone(self.config.pytz())),
                                        'start_mrid': start_mrid,
                                        'end_mrid': end_mrid}).prepare()
         
