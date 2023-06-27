@@ -203,6 +203,7 @@ class WeatherStation(ABC):
         return datetimeUTC(value=in_tz.localize(dt).astimezone(pytz.utc))
 
     def get_readings_local(self, start_datetime : datetime, end_datetime : datetime, tz : str, add_to=None):
+        """ get reading using local time.  Is that time local to station or to user?"""
         start_datetime=datetimeUTC(value=pytz.timezone(tz).localize(start_datetime).astimezone(pytz.utc))
         end_datetime=datetimeUTC(value=pytz.timezone(tz).localize(end_datetime).astimezone(pytz.utc))
         return self.get_readings(start_datetime=start_datetime,
@@ -217,22 +218,22 @@ class WeatherStation(ABC):
         add_to: option for list to be passed in already containing metadata to be added to
         """
         
-        #TODO: !!! ensure all datetimes are UTC.  if we allow 'str' inputs for date time, can't enforce that
-        # create a request_interval pydantic type that requires a datetime object with a timezone, and that timezone must be UTC
-
-        # Unwrap classes for easier access
+        # runtime checking that datetime is UTC, will raise an exception if not
         assert isinstance(start_datetime, datetimeUTC) and isinstance(end_datetime, datetimeUTC)
+
         start_datetime = start_datetime.value
         end_datetime = end_datetime.value
+        
         # for meta-data
         self.request_datetime = pytz.utc.localize(datetime.utcnow())
         
         # the time delta in this method is abritrary but fits with the proposed data pipeline
         if not start_datetime:
-            # no start ?  Use the interval 15 minutees before present time.  see module for details.  Ignore end time if it's sent
+            # use default interval 
             start_datetime, end_datetime =  previous_fourteen_minute_period()
         else:
             if not end_datetime: 
+                # use default interval end time
                 end_datetime = start_datetime + timedelta(minutes= 14)
 
         responses = []
@@ -269,7 +270,7 @@ class WeatherStation(ABC):
         Transforms data and return it in a standardized format. 
         data: optional input used to load in data if transform of existing data dictionary is required.
         """
-        # Unwraps once it has been checked to be UTC
+        # runtime type checking.  Unwraps once it has been checked to be UTC
         assert isinstance(request_datetime, datetimeUTC)
         request_datetime = request_datetime.value
         if data is None:
