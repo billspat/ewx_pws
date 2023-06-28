@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field, ValidationError, validator
 from typing import Literal
 
 # package local
-from ewx_pws.time_intervals import previous_fourteen_minute_period, previous_fifteen_minute_period, fifteen_minute_mark
+from ewx_pws.time_intervals import is_tz_aware, is_utc, previous_fourteen_minute_period, DatetimeUTC # previous_fifteen_minute_period, fifteen_minute_mark
 from importlib.metadata import version
 
 #############
@@ -198,20 +198,35 @@ class WeatherStation(ABC):
         # Creates a UTC timezone aware datetime from a string and an optional timezone
         # If a timezone is passed, UTC is still returned, just adjusted for the input being a different TZ
         dt = datetime.fromisoformat(datetime_str)
-        if not in_tz:
-            return datetimeUTC(value=pytz.utc.localize(dt))
-        return datetimeUTC(value=in_tz.localize(dt).astimezone(pytz.utc))
+        # if not in_tz:
+        #     return datetimeUTC(value=pytz.utc.localize(dt))
+        if not is_tz_aware(dt):
+            dt =  pytz.timezone(self.config.pytz()).localize(dt)
+            
+        return dt.astimezone(timezone.utc) # datetimeUTC(value=in_tz.localize(dt).astimezone(pytz.utc))
 
-    def get_readings_local(self, start_datetime : datetime, end_datetime : datetime, tz : str, add_to=None):
-        """ get reading using local time.  Is that time local to station or to user?"""
-        start_datetime=datetimeUTC(value=pytz.timezone(tz).localize(start_datetime).astimezone(pytz.utc))
-        end_datetime=datetimeUTC(value=pytz.timezone(tz).localize(end_datetime).astimezone(pytz.utc))
-        return self.get_readings(start_datetime=start_datetime,
-                                 end_datetime=end_datetime,
-                                 add_to=add_to)
+    def get_readings_local(self, start_datetime_local: datetime, end_datetime_local: datetime, add_to=None):
+        """ get reading for the timezone of the station.  This will be problematic for DST readings
+        datetimes with a tz set to one outside of station tz are invalid.  Use UTC with get_reading() method instead
+        e.g. start_datetime_local == 6:00 am, is 6:00am for the tz of the station. """            
+    
+        def correct_tz(dt):
+            """ internal fn to adapt dt sent to local time of station.  """
+            if dt.tzinfo is None:
+                return( pytz.timezone(self.config.pytz()).localize(dt) )
+            
+            if  dt.tzinfo == pytz.timezone(self.config.pytz()):
+                return(dt)
+
+            raise ValueError(f"time argument timezone does not match station.  Remove timezone or use {self.config.tz}")         
+
+        start_datetime_utc = correct_tz(start_datetime_local).astimezone(timezone.utc)
+        end_datetime_utc   = correct_tz(end_datetime_local).astimezone(timezone.utc)
+        return self.get_readings(start_datetime=start_datetime_utc, end_datetime=end_datetime_utc, add_to=add_to)
+
     
     # user api method that has optional start & end times
-    def get_readings(self, start_datetime : datetimeUTC, end_datetime : datetimeUTC, add_to=None):
+    def get_readings(self, start_datetime : datetime, end_datetime : datetime, add_to=None):
         """prepare start/end times and other params generically and then call station-specific method with that.
         start_datetime: date time in UTC time zone
         end_datetime: date time in UTC time zone.  If start_datetime is empty this is ignored 
@@ -219,17 +234,18 @@ class WeatherStation(ABC):
         """
         
         # runtime checking that datetime is UTC, will raise an exception if not
-        assert isinstance(start_datetime, datetimeUTC) and isinstance(end_datetime, datetimeUTC)
-
-        start_datetime = start_datetime.value
-        end_datetime = end_datetime.value
+        if not is_utc(start_datetime):
+            raise ValueError("start_datetime must be UTC timezone")
+        
+        if not is_utc(end_datetime):
+            raise ValueError("end_datetime must be UTC timezone")
         
         # for meta-data
-        self.request_datetime = pytz.utc.localize(datetime.utcnow())
+        self.request_datetime =datetime.utcnow()
         
-        # the time delta in this method is abritrary but fits with the proposed data pipeline
+        # the time delta in this method is best for the data pipeline
         if not start_datetime:
-            # use default interval 
+            # use default interval, ignore end_date_time 
             start_datetime, end_datetime =  previous_fourteen_minute_period()
         else:
             if not end_datetime: 
@@ -265,14 +281,13 @@ class WeatherStation(ABC):
             add_to.append(response)
         return add_to
     
-    def transform(self, data = None, request_datetime: datetimeUTC = None):
+    
+    def transform(self, data = None, request_datetime: datetime = datetime.now(timezone.utc)):
         """
         Transforms data and return it in a standardized format. 
         data: optional input used to load in data if transform of existing data dictionary is required.
         """
         # runtime type checking.  Unwraps once it has been checked to be UTC
-        assert isinstance(request_datetime, datetimeUTC)
-        request_datetime = request_datetime.value
         if data is None:
             data = self.response_data
 

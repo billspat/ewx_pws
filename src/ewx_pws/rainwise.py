@@ -68,7 +68,7 @@ class RainwiseStation(WeatherStation):
         for key in data['times']:
             temp = RainwiseReading(station_id=data['station_id'],
                             request_datetime=request_datetime,
-                            data_datetime=self.dt_utc_from_str(data['times'][key]).value,
+                            data_datetime=self.dt_utc_from_str(data['times'][key]),
                             atemp=round((float(data['temp'][key]) - 32) * 5/9, 2),
                             pcpn=round(float(data['precip'][key]) * 25.4, 2),
                             relh=round(float(data['hum'][key]), 2))

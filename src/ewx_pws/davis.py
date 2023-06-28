@@ -1,4 +1,3 @@
-# DAVIS WIP
 
 import collections, hashlib, hmac
 import json,pytz, time
