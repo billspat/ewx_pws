@@ -1,10 +1,7 @@
 """utils for editing time stamps"""
 
-from datetime import datetime, timedelta
-from pytz import timezone, UTC
-timezone.utc = UTC
-from zoneinfo import ZoneInfo
-from pydantic import BaseModel, ValidationError, validator, root_validator
+from datetime import datetime, timezone, timedelta
+from pydantic import BaseModel, root_validator
 
 
 def is_tz_aware(dt:datetime)->bool:
@@ -17,6 +14,15 @@ def is_tz_aware(dt:datetime)->bool:
             return True
     return False
   
+def is_utc(dt:datetime)->bool:
+    if not is_tz_aware(dt):
+        return False
+    
+    if not dt.tzinfo == timezone.utc:
+        return False
+    
+    return True
+ 
 
 class DatetimeUTC(BaseModel):
     """singleton type to validate datetime has a timezone and convert to UTC if so. 
@@ -82,6 +88,17 @@ def fifteen_minute_mark(dtm:datetime=datetime.now(timezone.utc))->datetime:
                      microseconds=dtm.microsecond)
     return(dtm)
 
+def fifteen_minute_mark_utc(dtm:datetime=datetime.now(timezone.utc))->datetime:
+    """return the nearest previous 15 minute mark.  e.g. 10:49 -> 10:45, preserves timezone if any. 
+    parameter dtm = optional datetime, default is 'now' using utc timezone """
+
+    if not is_utc(dtm):
+        raise ValueError("dtm must have timezone set to UTC")
+    
+    dtm -= timedelta(minutes=dtm.minute % 15,
+                     seconds=dtm.second,
+                     microseconds=dtm.microsecond)
+    return(dtm)
 
 def previous_fifteen_minute_period(dtm:datetime=datetime.now(timezone.utc))->tuple[datetime, datetime]:
     """ returns tuple of start/end times that is on the quarter hour and inclusive. 
@@ -140,13 +157,13 @@ def previous_interval(dtm:datetime=datetime.now(timezone.utc), delta_mins:int=15
     set arbitrary delta (15 minutes, 14 minutes, 30 minutes, etc)
     
     """
-    # starter time
+    # starter time - 
     dtm_utc = DatetimeUTC(dtm)
 
     # quarter hour prior to starter (11:55 ->  11:45, etc)
     end_datetime_utc = DatetimeUTC(fifteen_minute_mark(dtm_utc.datetime))
     # time previous to that for delta
-    start_datetime_utc = DatetimeUTC(end_datetime - timedelta(minutes=delta_mins))
+    start_datetime_utc = DatetimeUTC(end_datetime_utc - timedelta(minutes=delta_mins))
     
     try:
         dti = DatetimeInterval(start = start_datetime_utc, end = end_datetime_utc )
