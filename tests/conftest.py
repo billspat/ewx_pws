@@ -6,6 +6,8 @@ from dotenv import load_dotenv
 load_dotenv()
 from ewx_pws.weather_stations import STATION_TYPE_LIST
 from ewx_pws.ewx_pws import logging
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
 
 @pytest.fixture
@@ -77,3 +79,24 @@ def station_configs(station_dict_from_env):
         configs[station_type]  = s_config 
     
     return configs
+
+@pytest.fixture
+def time_interval(tzstr='US/Eastern'):
+    """ returns tuple of localized start/end time that is literal, 1am first of current month"""
+
+    # TODO make this random day/time within 14d of current time
+    tz = ZoneInfo(tzstr)
+    rn = datetime.now(tz)
+    sdt=datetime(year= rn.year, month = rn.month, day=1, hour=1, minute=0, second=0).astimezone(tz)
+    edt=datetime(year= rn.year, month = rn.month, day=1, hour=1, minute=19, second=0).astimezone(tz)
+
+    return( (sdt,edt) )
+
+@pytest.fixture
+def utc_time_interval(time_interval):
+    """ return an tuple of start/end arbitrary time interval in as timezone.utc time
+    just convert the fixture above to timezone.utc"""
+    s,e = time_interval
+    return( (s.astimezone(timezone.utc), e.astimezone(timezone.utc)))
+    
+

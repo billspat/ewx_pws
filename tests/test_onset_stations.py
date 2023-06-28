@@ -1,7 +1,7 @@
 from ewx_pws.onset import OnsetConfig, OnsetStation, WeatherStationConfig, WeatherStation
-from ewx_pws.weather_stations import datetimeUTC
 import pytest, re, logging
 from datetime import datetime
+
 
 # note: fixtures auto-imported from conftest.py
 
@@ -64,7 +64,7 @@ def test_onset_readings(test_station):
     assert readings[0]['station_type'] == 'ONSET'
     
     for i in range(1,len(readings)):
-        resp_datetime = datetimeUTC(value=readings[0]['response_datetime_utc' + str(i)])
+        resp_datetime = readings[0]['response_datetime_utc' + str(i)]
         transformed_reading = test_station.transform(data=readings[i], request_datetime=resp_datetime)
         assert len(transformed_reading.readings) > 0
         for value in transformed_reading.readings:

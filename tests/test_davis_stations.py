@@ -1,5 +1,4 @@
 from ewx_pws.davis import DavisStation, DavisConfig, WeatherStationConfig, WeatherStation
-from ewx_pws.weather_stations import datetimeUTC
 import pytest, re, logging
 from datetime import datetime
 
@@ -46,10 +45,9 @@ def test_davis_class_instantiation_from_config(station_configs, station_type):
     assert isinstance(davis_station, WeatherStation)
     assert isinstance(davis_station.id, str)
       
-def test_davis_readings(test_station):
+def test_davis_readings(test_station, utc_time_interval):
     
-    sdt=test_station.dt_utc_from_str("2022-12-01 19:00:00")
-    edt=test_station.dt_utc_from_str("2022-12-02 19:15:00")
+    sdt,edt = utc_time_interval
 
     # test with hard-coded time
     readings = test_station.get_readings(start_datetime=sdt,end_datetime=edt)
@@ -66,7 +64,7 @@ def test_davis_readings(test_station):
     assert readings[0]['station_type'] == 'DAVIS'
     
     for i in range(1,len(readings)):
-        resp_datetime = datetimeUTC(value=readings[0]['response_datetime_utc' + str(i)])
+        resp_datetime = readings[0]['response_datetime_utc' + str(i)]
         transformed_reading = test_station.transform(data=readings[i], request_datetime=resp_datetime)
         assert len(transformed_reading.readings) > 0
         for value in transformed_reading.readings:

@@ -2,7 +2,7 @@
 
 import pytest
 from datetime import datetime, timedelta, timezone
-import pytz
+from zoneinfo import ZoneInfo
 from pydantic import ValidationError
 
 from ewx_pws import time_intervals
@@ -40,7 +40,6 @@ def test_15minutemark(test_timestamp):
 
 
 def test_previous_fifteen_minute_period():
-
     
     pfmp = previous_fifteen_minute_period()
     assert len(pfmp) == 2
@@ -75,16 +74,17 @@ def test_datetime_utc(just_past_two):
     nowish = datetime.now(timezone.utc)
     dtu = DatetimeUTC(datetime = nowish)
     assert isinstance(dtu.datetime, datetime)
-    assert dtu.datetime.tzinfo == pytz.UTC
+    assert dtu.datetime.tzinfo == timezone.utc
 
     # fixture should not have a timezone, let's check
     assert just_past_two.tzinfo is None
     with pytest.raises(ValidationError):
         DatetimeUTC(datetime = just_past_two)
 
-    # add a tz and check again    
-    dt_with_tz = pytz.timezone('US/Eastern').localize(just_past_two)
+    # add a tz and check again  
+    
+    dt_with_tz = just_past_two.astimezone(ZoneInfo('US/Eastern'))  
     dtu = DatetimeUTC(datetime = dt_with_tz)
     assert isinstance(dtu.datetime, datetime)
-    assert dtu.datetime.tzinfo == pytz.UTC
+    assert dtu.datetime.tzinfo == timezone.utc
 
