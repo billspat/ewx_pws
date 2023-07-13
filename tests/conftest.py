@@ -106,7 +106,8 @@ def fake_station_configs(fake_stations_list):
 
 @pytest.fixture
 def station_dict_from_env():
-    """build a dictionary of stations from os environemt, each in generic config format"""
+    """build a dictionary of stations from os environemt, each in generic config format. 
+    Uses the global constant STATION_TYPE_LIST from weather_stations.py """
     stations_available  = [s for s in STATION_TYPE_LIST if s.upper() in  environ.keys()]
     stations = {}
     for station_name in stations_available:
