@@ -1,5 +1,5 @@
 import time, json, pytz
-from requests import Session, Request
+from requests import post, Session, Request
 from datetime import datetime, timezone
 
 from ewx_pws.weather_stations import WeatherStationConfig, WeatherStationReading, WeatherStationReadings, WeatherStation, STATION_TYPE
@@ -13,7 +13,6 @@ class LocomosConfig(WeatherStationConfig):
 
 class LocomosStation(WeatherStation):
     """Sub class for  MSU BAE LOCOMOS weather stations used for TOMCAST model"""
-
     @classmethod
     def init_from_dict(cls, config:dict):
         """ accept a dictionary to create this class, rather than the Type class"""
@@ -25,37 +24,78 @@ class LocomosStation(WeatherStation):
     def __init__(self,config: LocomosConfig):
         """ create class from config Type"""
         super().__init__(config)
+        self.var_list = {}
+
 
     def _check_config(self):
         # TODO implement 
         return(True)
 
+    def _get_variable_list(self):
+        """load ubidots variable list
+        
+        gets the list of variables and their IDS for this Ubidots device via the Ubidots API. 
+        Ubidots is flexible and allows for multiple sensors or 'variables' each with it's own label and ID. 
+        If this object already has a non-empty variable list, does not make the request a second time
+        """
+
+        if self.var_list is None or len(self.var_list) == 0:
+            # object member is empty, load and save list of variables from API
+            var_request = Request(method='GET',
+                    url=f"https://industrial.api.ubidots.com/api/v2.0/devices/{self.config.id}/variables/", 
+                    headers={'X-Auth-Token': self.config.token}, 
+                    params={'page_size':'ALL'}).prepare()
+            var_response = json.loads(Session().send(var_request).content)
+            var_list = {}
+            for result in var_response['results']:
+                var_list[result['label']] = result['id']
+            
+            self.var_list = var_list
+        
+        return(self.var_list)
+    
+        
     def _get_readings(self, start_datetime:datetime, end_datetime:datetime):
         """
-        Params are start time, end time.
+        Pull "data raw series" from UBIDOTS api.  Note they use POST rather than get.  
+        See Ubidots doc : https://docs.ubidots.com/v1.6/reference/data-raw-series
+        Params are start time, end time in UTC
         Returns api response in a list with metadata
+        Example Curl command 
+        # curl -X POST 'https://industrial.api.ubidots.com/api/v1.6/data/raw/series' \
+        #     -H 'Content-Type: application/json' \
+        #     -H "X-Auth-Token: $TOKEN" \
+        #     -d '{"variables": ["6410e8564a53ce000ec46e46"], "columns": ["variable.name","value.value", "timestamp"], "join_dataframes": false, "start": 1679202000000, "end":1679203800000}'
         """
         
         start_milliseconds=int(start_datetime.timestamp() * 1000)
         end_milliseconds=int(end_datetime.timestamp() * 1000)
-
-        var_request = Request(method='GET',
-                url='https://industrial.api.ubidots.com/api/v2.0/devices/{}/variables/'.format(self.config.id), 
-                headers={'X-Auth-Token': self.config.token}, 
-                params={'page_size':'ALL'}).prepare()
-        var_response = json.loads(Session().send(var_request).content)
-        var_list = {}
-        for result in var_response['results']:
-            var_list[result['label']] = result['id']
         
         data = {}
+               
+        request_headers = {
+            'Content-Type': 'application/json',
+            'X-Auth-Token': self.config.token,
+        }
+        response_columns = ['timestamp', 'device.name', 'device.label', 'variable.id', 'value.context', 'variable.name', 'value.value']
+
+        var_list = self._get_variable_list()
+        print(var_list)
+
+        # make a different request for each variable and store in a dict 
+        # so that we can keep track of the data by variable name, not ID
+        # var_list[var]
         for var in var_list:
-            request = Request(method='GET',
-                url='https://industrial.api.ubidots.com/api/v1.6/variables/{}/values'.format(var_list[var]), 
-                headers={'X-Auth-Token':self.config.token}, 
-                params={'page_size':'ALL', 'start':int(start_milliseconds), 'end':int(end_milliseconds)}).prepare()
-            response = json.loads(Session().send(request).content)
-            data[var] = response
+            request_params = {
+                'variables': [var_list[var]],
+                'columns': response_columns,
+                'join_dataframes': False,
+                'start': start_milliseconds,
+                'end': end_milliseconds,
+            }
+            response = post(url='https://industrial.api.ubidots.com/api/v1.6/data/raw/series', headers=request_headers, json=request_params)
+            data[var] = response.content
+
         return_dict = {
             'station_id': self.config.station_id,
             'request_datetime': datetime.utcnow(),
