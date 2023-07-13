@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 
 from ewx_pws.weather_stations import WeatherStation, STATION_TYPE, STATION_TYPE_LIST
 from ewx_pws.davis import DavisStation
+from ewx_pws.locomos import LocomosStation
 from ewx_pws.rainwise import RainwiseStation
 from ewx_pws.spectrum import SpectrumStation
 from ewx_pws.onset import OnsetStation
@@ -18,7 +19,7 @@ from ewx_pws.time_intervals import previous_fifteen_minute_period
 load_dotenv()
 logging.basicConfig(level=logging.NOTSET, format='%(asctime)s-%(process)d-%(levelname)s-%(message)s')
 
-STATION_CLASS_TYPES = {'ZENTRA': ZentraStation, 'ONSET': OnsetStation, 'DAVIS': DavisStation,'RAINWISE': RainwiseStation, 'SPECTRUM':SpectrumStation }
+STATION_CLASS_TYPES = {'ZENTRA': ZentraStation, 'ONSET': OnsetStation, 'DAVIS': DavisStation,'RAINWISE': RainwiseStation, 'SPECTRUM':SpectrumStation, 'LOCOMOS':LocomosStation }
 
 def get_readings(stations:list,
                 start_datetime_str:str = None,

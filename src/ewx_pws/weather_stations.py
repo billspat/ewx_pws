@@ -21,8 +21,8 @@ from importlib.metadata import version
 # GLOBALS and TYPE MODELS
 
 # station type type, like an enum
-STATION_TYPE = Literal['ZENTRA', 'ONSET', 'DAVIS', 'RAINWISE', 'SPECTRUM', 'LOCOMOS', 'GENERIC']  # generic type is a hack for testing
-STATION_TYPE_LIST = ['ZENTRA', 'ONSET', 'DAVIS', 'RAINWISE', 'SPECTRUM', 'LOCOMOS', 'GENERIC']
+STATION_TYPE = Literal['ZENTRA', 'ONSET', 'DAVIS', 'RAINWISE', 'SPECTRUM', 'LOCOMOS', 'GENERIC'] 
+STATION_TYPE_LIST =   ['ZENTRA', 'ONSET', 'DAVIS', 'RAINWISE', 'SPECTRUM', 'LOCOMOS', 'GENERIC']
 TIMEZONE_CODE = Literal['HT','AT','PT','MT','CT','ET']        
 TIMEZONE_CODE_LIST = {
             'HT': 'US/Hawaii',

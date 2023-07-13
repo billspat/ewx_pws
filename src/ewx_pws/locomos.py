@@ -9,10 +9,11 @@ class LocomosConfig(WeatherStationConfig):
         station_type   : STATION_TYPE = 'LOCOMOS'
         token          : str # Device token
         id             : str # ID field on device webpage
-        tz             : str = 'US/Eastern'
+        tz             : str
 
 class LocomosStation(WeatherStation):
-    """ config is RainwiseConfig type """
+    """Sub class for  MSU BAE LOCOMOS weather stations used for TOMCAST model"""
+
     @classmethod
     def init_from_dict(cls, config:dict):
         """ accept a dictionary to create this class, rather than the Type class"""

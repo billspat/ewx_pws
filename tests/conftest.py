@@ -2,6 +2,7 @@ import pytest, random, string, json
 
 from os import environ
 import sys
+import importlib
 
 # from tempfile import NamedTemporaryFile
 from dotenv import load_dotenv
@@ -14,7 +15,6 @@ from ewx_pws.weather_stations import STATION_TYPE_LIST
 
 # TODO improve this obvious cludge to avoid testing these types
 STATION_TYPE_LIST.remove('GENERIC')
-STATION_TYPE_LIST.remove('LOCOMOS')
 
 from ewx_pws.ewx_pws import logging
 from datetime import datetime, timezone
@@ -91,6 +91,8 @@ def fake_station_configs(fake_stations_list):
     """using the fake data above, reform into dictionaries of config
     return: dict of fake configs, only one entry per station type"""
     
+    # TODO: make the env file JSON dictionary keys match the config dictionary keys. 
+    # THIS ASSUMES KEYS ARE IN A SPECIFIC ORDER AND DOES NOT PULL BY NAME.   
     fake_configs = {}
     for fs in fake_stations_list:
         fake_config = json.loads(fs[2])
@@ -135,38 +137,8 @@ def station_configs(station_dict_from_env):
     return configs
 
 
-
-# example of what we are trying to make generic / DRY
-# from ewx_pws.onset import OnsetConfig, OnsetStation
-# @pytest.fixture
-# def station_type():
-#     return 'ONSET'
-
-# @pytest.fixture
-# def test_station(station_configs, station_type):
-#     station = OnsetStation.init_from_dict(station_configs[station_type])
-#     return(station)
-
-# def test_onset_config(fake_station_configs,  station_type):
-#     c = OnsetConfig.parse_obj(fake_station_configs[station_type])
-#     assert isinstance(c, OnsetConfig)
-
-# loop over station_type
-def test_station_config(station_type, fake_station_configs,  station_config_types):
-    """ simple test that a station config type can be instantiated from example data
-    params
-    station_type : string of the type of station
-    fake_station_configs: fixture, dictionary of some test configs, keyed on station type
-    station_config_types: dictionary of config classes keyed on station type
-    """
-    
-    StationConfigType = station_config_types[station_type]
-    c = StationConfigType.parse_obj(fake_station_configs[station_type])
-    # will this work? 
-    assert isinstance(c, StationConfigType)
-
 @pytest.fixture
-def station_classes(station_configs):
+def station_classes(station_dict_from_env):
     """ this creates a dicitionary of classes by importing the class from module.   
     For this to work for a weather station named 'Xtype', 
      - the module (file)  that contains the class must be named xtype.py and in the same directory
