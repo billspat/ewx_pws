@@ -4,9 +4,10 @@ import requests
 import pytest, json, pytz, datetime
 
 @pytest.fixture
-def test_station_config():
+def generic_station_config():
     """ example config dictionary for generic station, note no sn, password or other info like other stations"""
     return( {'station_id' : 'fakestation', 'station_type' : "GENERIC", 'tz' : "ET" })
+
 
 @pytest.fixture
 def fake_station_class():
@@ -29,35 +30,35 @@ def fake_station_class():
         
     return(FakeStation)
 
-def test_weatherstation_config_type(test_station_config):
+def test_weatherstation_config_type(generic_station_config):
     # test can parse good config
-    ws =  WeatherStationConfig.parse_obj(test_station_config)
+    ws =  WeatherStationConfig.parse_obj(generic_station_config)
     assert isinstance(ws, WeatherStationConfig)
 
-def test_weatherstation_config_timezone_validation(test_station_config):    
+def test_weatherstation_config_timezone_validation(generic_station_config):    
     """ test that validation fails for incorrect tz code"""
     # test timezone validation with invalid tz
-    test_station_config['tz'] = 'XX'
+    generic_station_config['tz'] = 'XX'
     with pytest.raises(ValidationError):
-        ws =  WeatherStationConfig.parse_obj(test_station_config)
+        ws =  WeatherStationConfig.parse_obj(generic_station_config)
 
-def test_tz_convert(test_station_config):
+def test_tz_convert(generic_station_config):
     """basic test that the convert works for one timezone"""
     # set to a known timezone
-    test_station_config['tz'] = 'ET'
-    ws =  WeatherStationConfig.parse_obj(test_station_config)
+    generic_station_config['tz'] = 'ET'
+    ws =  WeatherStationConfig.parse_obj(generic_station_config)
     assert ws.pytz() == 'US/Eastern'
 
     
 
-def test_can_subclass_weather_station(fake_station_configs,fake_station_class):
-    fake_config = WeatherStationConfig.parse_obj(fake_station_configs['GENERIC'])
+def test_can_subclass_weather_station(generic_station_config,fake_station_class):
+    fake_config = WeatherStationConfig.parse_obj(generic_station_config)
     fake_station_1 = fake_station_class(fake_config)
     assert isinstance(fake_station_1,WeatherStation)
     
-def test_can_instantiate_from_dict(fake_station_configs,fake_station_class):
+def test_can_instantiate_from_dict(generic_station_config,fake_station_class):
     # test class method for reading from dict
-    fake_station = fake_station_class.init_from_dict(fake_station_configs['GENERIC'])
+    fake_station = fake_station_class.init_from_dict(generic_station_config)
     assert isinstance(fake_station,WeatherStation)
     # test that there are at least _some_ elements
     assert isinstance(fake_station.id, str)

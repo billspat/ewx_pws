@@ -1,14 +1,68 @@
 import pytest, random, string, json
 
 from os import environ
+import sys
+
 # from tempfile import NamedTemporaryFile
 from dotenv import load_dotenv
+# project wide .env
 load_dotenv()
+# testing .env
+load_dotenv('tests/.env')
+
 from ewx_pws.weather_stations import STATION_TYPE_LIST
+
+# TODO improve this obvious cludge to avoid testing these types
+STATION_TYPE_LIST.remove('GENERIC')
+STATION_TYPE_LIST.remove('LOCOMOS')
+
 from ewx_pws.ewx_pws import logging
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
+
+def pytest_addoption(parser):
+    parser.addoption(
+        "--stationtype",
+        action="store",
+        default=None,
+        help="station type to test, Default = All",
+        choices=STATION_TYPE_LIST
+    )
+
+def pytest_generate_tests(metafunc):
+    """parameterize command line options to inject into every test, specifically vendor
+    If a vendor is passed on command line, use that, else use all vendors"""
+    # This is called for every test. Only get/set command line arguments
+    # if the argument is specified in the list of test "fixturenames".
+
+    stationtype_option = metafunc.config.getoption("stationtype")
+
+    # for those tests that require a station_type .. use code to inject the option or check for param and also for config
+    if "station_type" in metafunc.fixturenames:
+        if stationtype_option is not None:
+            stationtype_option = stationtype_option.upper()
+            if not stationtype_option in STATION_TYPE_LIST:
+                # station type on command line invalid, abort testing
+                sys.exit(1)
+            else:
+                types_to_test = [stationtype_option]      
+            
+            # metafunc.parametrize('vendor', [vendor_option.upper()])
+            # TODO more elegant way to bug out
+            
+        else:
+            types_to_test = STATION_TYPE_LIST
+
+            # metafunc.parametrize('vendor', all_vendors)
+        
+        # ensure there is valid configuration for the type(s) to test
+        # TODO check against the fixture that loads config from disk
+        # for now just assume they are all available
+
+        testable_station_types = types_to_test
+
+        metafunc.parametrize('station_type', testable_station_types)
 
 @pytest.fixture
 def random_string():
@@ -79,6 +133,54 @@ def station_configs(station_dict_from_env):
         configs[station_type]  = s_config 
     
     return configs
+
+
+
+# example of what we are trying to make generic / DRY
+# from ewx_pws.onset import OnsetConfig, OnsetStation
+# @pytest.fixture
+# def station_type():
+#     return 'ONSET'
+
+# @pytest.fixture
+# def test_station(station_configs, station_type):
+#     station = OnsetStation.init_from_dict(station_configs[station_type])
+#     return(station)
+
+# def test_onset_config(fake_station_configs,  station_type):
+#     c = OnsetConfig.parse_obj(fake_station_configs[station_type])
+#     assert isinstance(c, OnsetConfig)
+
+# loop over station_type
+def test_station_config(station_type, fake_station_configs,  station_config_types):
+    """ simple test that a station config type can be instantiated from example data
+    params
+    station_type : string of the type of station
+    fake_station_configs: fixture, dictionary of some test configs, keyed on station type
+    station_config_types: dictionary of config classes keyed on station type
+    """
+    
+    StationConfigType = station_config_types[station_type]
+    c = StationConfigType.parse_obj(fake_station_configs[station_type])
+    # will this work? 
+    assert isinstance(c, StationConfigType)
+
+@pytest.fixture
+def station_classes(station_configs):
+    """ this creates a dicitionary of classes by importing the class from module.   
+    For this to work for a weather station named 'Xtype', 
+     - the module (file)  that contains the class must be named xtype.py and in the same directory
+     - the station class must be named XtypeStation
+     
+     returns a dictionary keyed on station type with classes.
+     """
+    classes = {}
+    for station_type in station_dict_from_env:
+        station_class_name = station_type.title + "Station"
+        station_module_name  = 'ewx_pws.' + station_type.lower
+        m = importlib.import_module(station_module_name)
+        station_class = getattr(m, station_class_name)
+        classes[station_type] = station_class
 
 @pytest.fixture
 def time_interval(tzstr='US/Eastern'):
