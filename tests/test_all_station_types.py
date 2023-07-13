@@ -17,6 +17,7 @@ import sys
 
 
 from ewx_pws.davis import DavisStation, DavisConfig
+from ewx_pws.locomos import LocomosConfig
 from ewx_pws.rainwise import RainwiseStation, RainwiseConfig
 from ewx_pws.spectrum import SpectrumStation, SpectrumConfig
 from ewx_pws.onset import OnsetStation, OnsetConfig
@@ -29,6 +30,7 @@ def station_config_types():
     """ manually construct our list of station types to test"""
     station_config_types = {}
     station_config_types['DAVIS'] = DavisConfig
+    station_config_types['LOCOMOS'] = LocomosConfig
     station_config_types['RAINWISE'] = RainwiseConfig
     station_config_types['SPECTRUM'] = SpectrumConfig
     station_config_types['ONSET'] = OnsetConfig
