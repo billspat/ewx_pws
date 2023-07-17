@@ -71,20 +71,25 @@ class LocomosStation(WeatherStation):
         start_milliseconds=int(start_datetime.timestamp() * 1000)
         end_milliseconds=int(end_datetime.timestamp() * 1000)
         
-        data = {}
-               
+        response_columns = [
+            'timestamp', 
+            'device.name', 
+            'device.label', 
+            'variable.id', 
+            'value.context', 
+            'variable.name', 
+            'value.value'
+            ]
+        
         request_headers = {
             'Content-Type': 'application/json',
             'X-Auth-Token': self.config.token,
         }
-        response_columns = ['timestamp', 'device.name', 'device.label', 'variable.id', 'value.context', 'variable.name', 'value.value']
-
-        var_list = self._get_variable_list()
-        print(var_list)
-
+    
         # make a different request for each variable and store in a dict 
-        # so that we can keep track of the data by variable name, not ID
-        # var_list[var]
+        # so that we can keep track of the data by variable name, not the variable ID so it's easier to transform
+        data = {} # response_per_variable 
+        var_list = self._get_variable_list()
         for var in var_list:
             request_params = {
                 'variables': [var_list[var]],
@@ -92,16 +97,22 @@ class LocomosStation(WeatherStation):
                 'join_dataframes': False,
                 'start': start_milliseconds,
                 'end': end_milliseconds,
-            }
-            response = post(url='https://industrial.api.ubidots.com/api/v1.6/data/raw/series', headers=request_headers, json=request_params)
-            data[var] = response.content
+            }            
+            response = post(url='https://industrial.api.ubidots.com/api/v1.6/data/raw/series', 
+                            headers=request_headers, 
+                            json=request_params)
+            data[var] = json.loads(response.content)
 
-        return_dict = {
-            'station_id': self.config.station_id,
-            'request_datetime': datetime.utcnow(),
-            'data': data
-        }
-        return [return_dict]
+        # # move to superclass
+        # return_dict = {
+        #     'station_id': self.config.station_id,
+        #     'request_datetime': datetime.utcnow(),
+        #     'data': data
+        # }
+        # convert structure to json to match other 
+        self.current_response = [data]
+
+        return self.current_response
 
 
     def _transform(self, data=None, request_datetime: datetime = None):
@@ -110,7 +121,6 @@ class LocomosStation(WeatherStation):
         data param if left to default tries for self.response_data processing
         """
         readings_list = WeatherStationReadings()
-        tz = pytz.timezone(self.tzlist[self.config.tz])
 
         results = data['data']
         if 'precip' not in results.keys() or 'humidity' not in results.keys() or 'temperature' not in results.keys():
@@ -137,7 +147,7 @@ class LocomosStation(WeatherStation):
 
             temp = LocomosReading(station_id=data['station_id'],
                                     request_datetime=request_datetime,
-                                    data_datetime=datetime.fromtimestamp(timestamp / 1000, tz).astimezone(pytz.utc),
+                                    data_datetime=datetime.fromtimestamp(timestamp / 1000).astimezone(timezone.utc),
                                     atemp=temp,
                                     pcpn=round(precip * 25.4, 2),
                                     relh=humidity)
