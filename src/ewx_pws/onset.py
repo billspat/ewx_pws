@@ -2,7 +2,7 @@
 
 import json, pytz
 from dotenv import dotenv_values
-from requests import Session, Request
+from requests import get, post  # Session, Request
 from datetime import datetime, timezone
 
 from pydantic import Field
@@ -69,31 +69,23 @@ class OnsetStation(WeatherStation):
         # logging.debug('client_id: \"{}\"'.format(self.config.client_id))
         # logging.debug('client_secret: \"{}\"'.format(self.client_secret))
 
-        request = Request('POST',
-                          url='https://webservice.hobolink.com/ws/auth/token',
-                          headers={
-                              'Content-Type': 'application/x-www-form-urlencoded'},
-                          data={'grant_type': 'client_credentials',
+        response = post(url='https://webservice.hobolink.com/ws/auth/token',
+                        headers={
+                            'Content-Type': 'application/x-www-form-urlencoded'},
+                            data={'grant_type': 'client_credentials',
                                 'client_id': self.config.client_id,
                                 'client_secret': self.config.client_secret
                                 }
-                          ).prepare()
-        resp = Session().send(request)
-        if resp.status_code != 200:
+                            )
+        
+        if response.status_code != 200:
             raise Exception(
-                'Get Auth request failed with \'{}\' status code and \'{}\' message.'.format(resp.status_code,
-                                                                                             resp.text))
-        response = resp.json()
+                'Get Auth request failed with \'{}\' status code and \'{}\' message.'.format(response.status_code,
+                                                                                    response.text))
+        response = response.json()
         # store this in the object
         self.access_token = response['access_token']
-        return self.access_token
- 
-    def _format_time(self, dt:datetime)->str:
-        """
-        format date/time parameter for Onset API request
-        """
-        return(dt.strftime('%Y-%m-%d %H:%M:%S'))
-    
+        return self.access_token    
 
     def _get_readings(self,start_datetime:datetime,end_datetime:datetime)->list:
         """ use Onset API to pull data from this station for times between start and end.  Called by the parent 
@@ -109,23 +101,40 @@ class OnsetStation(WeatherStation):
         start_datetime_str = self._format_time(start_datetime)
         end_datetime_str = self._format_time(end_datetime)
             
-        self.current_api_request = Request('GET',
-                url=f"https://webservice.hobolink.com/ws/data/file/{self.config.ret_form}/user/{self.config.user_id}",
-                headers={'Authorization': "Bearer " + access_token},
-                params={'loggers': self.config.sn,
-                    'start_date_time': start_datetime_str,
-                    'end_date_time': end_datetime_str}).prepare()
-        
-        self.current_response = Session().send(self.current_api_request)
+        # self.current_api_request = Request('GET',
+        #         url=f"https://webservice.hobolink.com/ws/data/file/{self.config.ret_form}/user/{self.config.user_id}",
+        #         headers={'Authorization': "Bearer " + access_token},
+        #         params={'loggers': self.config.sn,
+        #             'start_date_time': start_datetime_str,
+        #             'end_date_time': end_datetime_str}).prepare()
+                
+        # response = Session().send(self.current_api_request)
 
-        return([json.loads(self.current_response.content)])
-    
-    def _transform(self, data=None, request_datetime: datetime = None):
+        response = get( url=f"https://webservice.hobolink.com/ws/data/file/{self.config.ret_form}/user/{self.config.user_id}",
+                        headers={'Authorization': "Bearer " + access_token},
+                        params={
+                            'loggers': self.config.sn,
+                            'start_date_time': start_datetime_str,
+                            'end_date_time': end_datetime_str
+                            }
+                        )
+
+        return(response)
+        
+    def _transform(response_data, readings_list):
+        readinginfos = {}
+        sensor_sns = self.config.sensor_sn
+        atemp_key = sensor_sns['atemp']
+        pcpn_key = sensor_sns['pcpn']
+        relh_key = sensor_sns['relh']
+        station_sn = data["observation_list"][0]["logger_sn"]
+        
+        
+    def _transform_old(self, data=None, request_datetime: datetime = None):
         """
         Transforms data into a standardized format and returns it as a WeatherStationReadings object.
         data param if left to default tries for self.response_data processing
         """
-        readings_list = WeatherStationReadings()
 
         # Return an empty list if there is no data contained in the response, this covers error 429
         if 'observation_list' not in data.keys():
@@ -172,7 +181,7 @@ class OnsetStation(WeatherStation):
 
 class OnsetReading(WeatherStationReading):
     station_id : str
-    request_datetime : datetime or None = None # UTC
+    request_datetime : datetime or None = None # UTC # should not be null
     data_datetime : datetime           # UTC
     atemp : float or None = None       # celsius 
     pcpn : float or None = None        # mm, > 0

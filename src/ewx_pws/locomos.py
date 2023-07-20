@@ -16,7 +16,6 @@ class LocomosStation(WeatherStation):
     @classmethod
     def init_from_dict(cls, config:dict):
         """ accept a dictionary to create this class, rather than the Type class"""
-
         # this will raise error if config dictionary is not correct
         station_config = LocomosConfig.parse_obj(config)
         return(cls(station_config))
@@ -24,35 +23,41 @@ class LocomosStation(WeatherStation):
     def __init__(self,config: LocomosConfig):
         """ create class from config Type"""
         super().__init__(config)
-        self.var_list = {}
-
+        self.variables = {}
 
     def _check_config(self):
         # TODO implement 
         return(True)
 
-    def _get_variable_list(self):
+    def _get_variables(self):
         """load ubidots variable list
         
         gets the list of variables and their IDS for this Ubidots device via the Ubidots API. 
         Ubidots is flexible and allows for multiple sensors or 'variables' each with it's own label and ID. 
-        If this object already has a non-empty variable list, does not make the request a second time
-        """
 
-        if self.var_list is None or len(self.var_list) == 0:
+        when the LOCOMOS station is set-up, sensors are defined with standardized labels.  
+        Those labels are used to transform the data to EWX standard naming
+
+        If this object already has a non-empty variable list, does not make the request a second time
+
+        returns : dictionary keyed on serial id and values are common names (label)
+        """
+        if self.variables is None or len(self.variables) == 0:
             # object member is empty, load and save list of variables from API
             var_request = Request(method='GET',
                     url=f"https://industrial.api.ubidots.com/api/v2.0/devices/{self.config.id}/variables/", 
                     headers={'X-Auth-Token': self.config.token}, 
                     params={'page_size':'ALL'}).prepare()
             var_response = json.loads(Session().send(var_request).content)
-            var_list = {}
+
+            variables = {}   
             for result in var_response['results']:
-                var_list[result['label']] = result['id']
+                variables[result['id']] = result['label']
             
-            self.var_list = var_list
+            #TODO add logging
+            self.variables = variables
         
-        return(self.var_list)
+        return(self.variables)
     
         
     def _get_readings(self, start_datetime:datetime, end_datetime:datetime):
@@ -70,7 +75,18 @@ class LocomosStation(WeatherStation):
         
         start_milliseconds=int(start_datetime.timestamp() * 1000)
         end_milliseconds=int(end_datetime.timestamp() * 1000)
-        
+  
+        request_headers = {
+            'Content-Type': 'application/json',
+            'X-Auth-Token': self.config.token,
+        }
+
+        variables = self._get_variables()
+        if isinstance(variables, dict) and len(variables) > 0: 
+            variable_ids = list(variables.keys())
+        else:
+            raise RuntimeError(f"LOCOMOS station {self._id} could not get variable list")
+
         response_columns = [
             'timestamp', 
             'device.name', 
@@ -81,38 +97,25 @@ class LocomosStation(WeatherStation):
             'value.value'
             ]
         
-        request_headers = {
-            'Content-Type': 'application/json',
-            'X-Auth-Token': self.config.token,
-        }
-    
-        # make a different request for each variable and store in a dict 
-        # so that we can keep track of the data by variable name, not the variable ID so it's easier to transform
-        data = {} # response_per_variable 
-        var_list = self._get_variable_list()
-        for var in var_list:
-            request_params = {
-                'variables': [var_list[var]],
+        request_params = {
+                'variables': variable_ids,
                 'columns': response_columns,
                 'join_dataframes': False,
                 'start': start_milliseconds,
                 'end': end_milliseconds,
-            }            
-            response = post(url='https://industrial.api.ubidots.com/api/v1.6/data/raw/series', 
+        }            
+        
+        response = post(url='https://industrial.api.ubidots.com/api/v1.6/data/raw/series', 
                             headers=request_headers, 
                             json=request_params)
-            data[var] = json.loads(response.content)
-
-        # # move to superclass
-        # return_dict = {
-        #     'station_id': self.config.station_id,
-        #     'request_datetime': datetime.utcnow(),
-        #     'data': data
-        # }
+        
+        return(response)
+    
+        # data[var] = json.loads(response.content)
         # convert structure to json to match other 
-        self.current_response = [data]
+        # self.current_response = [data]
 
-        return self.current_response
+        # return self.current_response
 
 
     def _transform(self, data=None, request_datetime: datetime = None):
