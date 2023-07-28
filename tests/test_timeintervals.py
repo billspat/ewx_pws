@@ -6,9 +6,9 @@ from zoneinfo import ZoneInfo
 from pydantic import ValidationError
 
 from ewx_pws import time_intervals
-from ewx_pws.time_intervals import fifteen_minute_mark,previous_fifteen_minute_period, previous_fourteen_minute_period, \
-                                    DatetimeUTC, \
-                                    DatetimeInterval, previous_fourteen_minute_interval,previous_fifteen_minute_interval
+from ewx_pws.time_intervals import fifteen_minute_mark,previous_fifteen_minute_period, previous_fourteen_minute_period
+from ewx_pws.time_intervals import is_utc, UTCInterval
+
 
 @pytest.fixture
 def test_timestamp():
@@ -70,21 +70,58 @@ def test_previous_fourteen_minute_period():
     assert len(pfmp) == 2
     assert (pfmp[1] - pfmp[0]).seconds == 14 * 60
 
-def test_datetime_utc(just_past_two):
+def test_is_utc(just_past_two):
     nowish = datetime.now(timezone.utc)
-    dtu = DatetimeUTC(datetime = nowish)
-    assert isinstance(dtu.datetime, datetime)
-    assert dtu.datetime.tzinfo == timezone.utc
+    assert is_utc(nowish)
 
-    # fixture should not have a timezone, let's check
-    assert just_past_two.tzinfo is None
-    with pytest.raises(ValidationError):
-        DatetimeUTC(datetime = just_past_two)
+    assert not is_utc(datetime.now())
 
-    # add a tz and check again  
+    assert not is_utc(datetime(month=1, day=1, year=1900))
+    assert not is_utc(datetime.now(tz = ZoneInfo("America/Detroit")))
+
+
+def test_utcinterval():
+    start, end = previous_fifteen_minute_period()
+
+    interval = UTCInterval(start=start,end=end)
+
+    assert isinstance(interval.start, datetime)
+    assert isinstance(interval.end, datetime)
+    assert is_utc(interval.start)
+    assert is_utc(interval.end)
+    # note not "less than or equal" - don't allow zero intervals
+    assert interval.start < interval.end 
+
+def test_utcinterval_methods():
+    interval = UTCInterval.previous_fifteen_minutes()
+    assert isinstance(interval.start, datetime)
+    assert isinstance(interval.end, datetime)
+    assert is_utc(interval.start)
+    assert is_utc(interval.end)
+    # note not "less than or equal" - don't allow zero intervals
+    assert interval.start < interval.end 
+
+    assert (interval.end - interval.start).seconds == 15 * 60
+
+def test_previous_interval():
+    dtm = datetime(2023, 1,1, hour=12, minute=0).astimezone(timezone.utc)
+    interval = UTCInterval.previous_interval(dtm = dtm )
+
+    assert isinstance(interval.start, datetime)
+    assert isinstance(interval.end, datetime)
+    assert is_utc(interval.start)
+    assert is_utc(interval.end)
+    # note not "less than or equal" - don't allow zero intervals
+    assert interval.start < interval.end 
+
+# def test_datetimeutc():
+#     assert just_past_two.tzinfo is None
+#     with pytest.raises(ValidationError):
+#         DatetimeUTC(datetime = just_past_two)
+
+#     # add a tz and check again  
     
-    dt_with_tz = just_past_two.astimezone(ZoneInfo('US/Eastern'))  
-    dtu = DatetimeUTC(datetime = dt_with_tz)
-    assert isinstance(dtu.datetime, datetime)
-    assert dtu.datetime.tzinfo == timezone.utc
-
+#     dt_with_tz = just_past_two.astimezone(ZoneInfo('US/Eastern'))  
+#     dtu = DatetimeUTC(datetime = dt_with_tz)
+#     assert isinstance(dtu.datetime, datetime)
+#     assert dtu.datetime.tzinfo == timezone.utc

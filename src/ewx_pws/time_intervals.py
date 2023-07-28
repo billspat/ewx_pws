@@ -1,8 +1,7 @@
 """utils for editing time stamps"""
 
 from datetime import datetime, timezone, timedelta
-from pydantic import BaseModel, root_validator
-
+from pydantic import BaseModel, root_validator, validator
 
 def is_tz_aware(dt:datetime)->bool:
     """ based on documentation, test if a datetime is timezone aware (T) or naive (F)
@@ -22,63 +21,67 @@ def is_utc(dt:datetime)->bool:
         return False
     
     return True
- 
-
-class DatetimeUTC(BaseModel):
-    """singleton type to validate datetime has a timezone and convert to UTC if so. 
-    this was written for DatetimeInterval but no longer used for that. can be used to validate datetime value"""
-    datetime: datetime # Needs to be UTC
-    # @validator('value')
-    # def check_datetime_utc(cls, d):
-    #     assert d.tzinfo == UTC
-    #     return d
-
-    @root_validator(allow_reuse=True)
-    def must_be_tz_aware(cls, values):
-        dt = values.get('datetime')
-        if dt.tzinfo is not None and dt.tzinfo.utcoffset(dt) is not None:
-            values['datetime'] = dt.astimezone(timezone.utc)                
-        else:
-            raise ValueError('datetime must have a timezone')
-        return(values)
-    
-    # convenience functions
-    def strftime(self, *args, **kwargs):
-        self.datetime.strftime(args,kwargs)
-
-    def astimezone(self, *args, **kwargs):
-         self.datetime.astimezone(args, kwargs)
 
 
-class DatetimeInterval(BaseModel):
-    """ Type to hold a start and end time that have timezones.  Timezones will be converted to UTC.   Note it's preferred to use UTC 
-    datetimes from the beginning as local times that occur durng the DST transition will not be known for sure and will most
-    likely be incorrect"""
-    start: DatetimeUTC
-    end: DatetimeUTC
-    #
+class UTCInterval(BaseModel):
+    """ datetime interval that requires user to supply UTC datetimes.  
+    Useful for passing start and end times into functions"""
+    start: datetime
+    end: datetime
     class Config:
         allow_reuse=True
+ 
+    @validator('start', 'end',allow_reuse=True)
+    def check_datetime_utc(cls, field):
+        if is_utc(field):
+            return field
+        raise ValueError("datetime must have a timezone and must be UTC")
     
-    # don't need this validator if using utc-enforced types     
-    # @validator('start','end',allow_reuse=True)
-    # def dt_must_have_timezone(cls, dt):
-    #     """ensure the date times provided have timezones, and convert those to UTC"""
-    #     if dt.tzinfo is not None and dt.tzinfo.utcoffset(dt) is not None:
-    #         return(dt.astimezone(timezone.utc))
-    #     else:
-    #         raise ValueError('datetime must have a timezone')
-    #
+    # this is a pre-validation step
     @root_validator(allow_reuse=True,pre=True)
     def validate_utc_interval(cls, values):
         """ensure that start is before end"""
-        start_dt = values.get('start')
-        end_dt = values.get('end')
-        #
-        if not start_dt.datetime <= end_dt.datetime:
-            raise ValueError('end date-time must come after start date-time')
-        return(values)
 
+        if (values.get('start') < values.get('end')):
+            return(values)
+        
+        raise ValueError('end date-time must come after start date-time')
+        
+    
+    @classmethod
+    def previous_fifteen_minutes(cls):
+        s,e = previous_fifteen_minute_period()
+        return( cls(start = s, end = e))
+    
+    @classmethod
+    def previous_interval(cls, dtm = datetime.now(timezone.utc), delta_mins:int=15):
+        """ returns  that is on the quarter hour and inclusive. 
+        input datetime object with timezone , e.g. 03:10:15+00
+        output: tuple of two datetime objects, e.g (02:45:00, 03:00:00)
+        
+        if called successively every 15 minutes, times will overlap , e.g. 
+        (02:45:00, 03:00:00), (03:00:00, 3:15:00),(3:15:00, 03:30:00), etc
+
+        set arbitrary delta (15 minutes, 14 minutes, 30 minutes, etc)
+        
+        """
+        # starter time - 
+        if not is_utc(dtm):
+            raise ValueError("input dtm must be a timezone aware value in UTC")
+        else:
+            dtm_utc = dtm
+
+        # quarter hour prior to starter (11:55 ->  11:45, etc)
+        end_datetime_utc = fifteen_minute_mark(dtm_utc)
+        # time previous to that for delta
+        start_datetime_utc = end_datetime_utc - timedelta(minutes=delta_mins)
+        
+        return cls(start = start_datetime_utc, end = end_datetime_utc )
+        
+
+    def duration(self):
+        return(self.end-self.start)
+    
 
 def fifteen_minute_mark(dtm:datetime=datetime.now(timezone.utc))->datetime:
     """return the nearest previous 15 minute mark.  e.g. 10:49 -> 10:45, preserves timezone if any. 
@@ -127,55 +130,39 @@ def previous_fourteen_minute_period( dtm:datetime = datetime.now(timezone.utc) )
     return( (start_datetime, end_datetime) )
 
 
-def previous_fifteen_minute_interval(dtm:datetime=datetime.now(timezone.utc))->DatetimeInterval:
-    """ returns  that is on the quarter hour and inclusive. 
-    input datetime object with timezone , e.g. 03:10:15+00
-    output: tuple of two datetime objects, e.g (02:45:00, 03:00:00)
+# def previous_interval(dtm:datetime=datetime.now(timezone.utc), delta_mins:int=15)->UTCInterval:
+#     """ returns  that is on the quarter hour and inclusive. 
+#     input datetime object with timezone , e.g. 03:10:15+00
+#     output: tuple of two datetime objects, e.g (02:45:00, 03:00:00)
     
-    if called successively every 15 minutes, times will overlap , e.g. 
-    (02:45:00, 03:00:00), (03:00:00, 3:15:00),(3:15:00, 03:30:00), etc
+#     if called successively every 15 minutes, times will overlap , e.g. 
+#     (02:45:00, 03:00:00), (03:00:00, 3:15:00),(3:15:00, 03:30:00), etc
+
+#     set arbitrary delta (15 minutes, 14 minutes, 30 minutes, etc)
     
-    """
+#     """
+#     # starter time - 
+#     dtm_utc = dtm
+
+#     # quarter hour prior to starter (11:55 ->  11:45, etc)
+#     end_datetime_utc = fifteen_minute_mark(dtm_utc.datetime)
+#     # time previous to that for delta
+#     start_datetime_utc = end_datetime_utc - timedelta(minutes=delta_mins)
+    
+#     try:
+#         dti = UTCInterval(start = start_datetime_utc, end = end_datetime_utc )
+#     except ValueError as e:
+#         raise(ValueError)
         
-    end_datetime = fifteen_minute_mark(dtm)  # must be utc
-    start_datetime = end_datetime - timedelta(minutes=15)
-    try:
-        dti = DatetimeInterval(start = start_datetime, end = end_datetime )
-    except ValueError as e:
-        raise(ValueError)
-        
-    return(dti)
+#     return(dti)
 
-def previous_interval(dtm:datetime=datetime.now(timezone.utc), delta_mins:int=15)->DatetimeInterval:
-    """ returns  that is on the quarter hour and inclusive. 
-    input datetime object with timezone , e.g. 03:10:15+00
-    output: tuple of two datetime objects, e.g (02:45:00, 03:00:00)
-    
-    if called successively every 15 minutes, times will overlap , e.g. 
-    (02:45:00, 03:00:00), (03:00:00, 3:15:00),(3:15:00, 03:30:00), etc
-
-    set arbitrary delta (15 minutes, 14 minutes, 30 minutes, etc)
-    
-    """
-    # starter time - 
-    dtm_utc = DatetimeUTC(dtm)
-
-    # quarter hour prior to starter (11:55 ->  11:45, etc)
-    end_datetime_utc = DatetimeUTC(fifteen_minute_mark(dtm_utc.datetime))
-    # time previous to that for delta
-    start_datetime_utc = DatetimeUTC(end_datetime_utc - timedelta(minutes=delta_mins))
-    
-    try:
-        dti = DatetimeInterval(start = start_datetime_utc, end = end_datetime_utc )
-    except ValueError as e:
-        raise(ValueError)
-        
-    return(dti)
-
-def previous_fourteen_minute_interval(dtm:datetime=datetime.now(timezone.utc))->DatetimeInterval:
+def previous_fourteen_minute_interval(dtm:datetime=datetime.now(timezone.utc))->UTCInterval:
     """ convenience method for using previous interval above for 14 intervals, 
     which are non-overlapping ranges of an hour
     00:00 - 00:14, 00:15 - 00:29, 00:30 - 00:44, 00:45 - 00:59
     """
-    dti = previous_interval(dtm, delta_mins=14)
+    dti = UTCInterval.previous_interval(dtm, delta_mins=14)
     return(dti)
+
+
+
