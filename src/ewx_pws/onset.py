@@ -1,7 +1,6 @@
 # ONSET ###################
 
-import json, pytz
-from dotenv import dotenv_values
+import json
 from requests import get, post  # Session, Request
 from datetime import datetime, timezone
 
@@ -12,15 +11,14 @@ from ewx_pws.weather_stations import WeatherStationConfig, WeatherStationReading
 ### Onset Notes
 
 # response.content  format
-
-    # {
+# {
     # "max_results": true,
     # "message": "",
     # "observation_list": []
-    # }
+# }
     
-    # message example: "message":"OK: Found: 0 results."
-    # "message":"OK: Found: 21 results."
+# message example: "message":"OK: Found: 0 results."
+# "message":"OK: Found: 21 results."
 
 class OnsetConfig(WeatherStationConfig):
     station_id : str
@@ -120,69 +118,50 @@ class OnsetStation(WeatherStation):
                         )
 
         return(response)
-        
-    def _transform(response_data, readings_list):
-        readinginfos = {}
-        sensor_sns = self.config.sensor_sn
-        atemp_key = sensor_sns['atemp']
-        pcpn_key = sensor_sns['pcpn']
-        relh_key = sensor_sns['relh']
-        station_sn = data["observation_list"][0]["logger_sn"]
-        
-        
-    def _transform_old(self, data=None, request_datetime: datetime = None):
+   
+    def _transform(self, response_data):
+        """transform of response.text to list of dict
+        only handle response.text (sensor values) and nothing else
         """
-        Transforms data into a standardized format and returns it as a WeatherStationReadings object.
-        data param if left to default tries for self.response_data processing
-        """
+        # if we can't decide to load JSON or not
+        if isinstance(response_data,str):
+            response_data = json.loads(response_data)
 
-        # Return an empty list if there is no data contained in the response, this covers error 429
-        if 'observation_list' not in data.keys():
-            return readings_list
+        if 'observation_list' not in response_data.keys():
+            return None
         
-        readinginfos = {}
+        readings = {}
         sensor_sns = self.config.sensor_sn
         atemp_key = sensor_sns['atemp']
         pcpn_key = sensor_sns['pcpn']
         relh_key = sensor_sns['relh']
-        station_sn = data["observation_list"][0]["logger_sn"]
+        station_sn = response_data["observation_list"][0]["logger_sn"]
 
         # Gathering each reading into an easily formattable manner
-        for reading in data["observation_list"]:
+        for reading in response_data["observation_list"]:
             # Remove Z's from ends of timestamps
             ts = reading["timestamp"]
             if reading["timestamp"][-1].lower() == 'z':
                     ts = ts[:-1]
             # Create new entry if time hasn't been encountered yet
-            if ts not in readinginfos.keys():
-                readinginfos[ts] = {}
+            if ts not in readings.keys():
+                readings[ts] = {}
+            
+            readings[ts]["data_datetime"] =  datetime.strptime(ts, '%Y-%m-%d %H:%M:%S').astimezone(timezone.utc)
+            
             # Set entries to contain proper data
             if reading["sensor_sn"] == atemp_key:
-                readinginfos[ts]["atemp"] = round(float(reading['si_value']), 2)
+                readings[ts]["atemp"] = round(float(reading['si_value']), 2)
             elif reading["sensor_sn"] == pcpn_key:
-                readinginfos[ts]["pcpn"] = round(float(reading['si_value']), 2)
+                readings[ts]["pcpn"] = round(float(reading['si_value']), 2)
             elif reading["sensor_sn"] == relh_key:
-                readinginfos[ts]["relh"] = round(float(reading['si_value']), 2)
+                readings[ts]["relh"] = round(float(reading['si_value']), 2)
 
-        # Putting that data into a WeatherStationsReading object in OnsetReading class format
-        for timestamp in readinginfos:
-            readings_list.readings.append(OnsetReading(station_id=station_sn,
-                                    request_datetime=request_datetime,
-                                    data_datetime=pytz.utc.localize(datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S')),
-                                    atemp=readinginfos[timestamp]['atemp'],
-                                    pcpn=readinginfos[timestamp]['pcpn'],
-                                    relh=readinginfos[timestamp]['relh']))
-                
-        return readings_list
+        # convert to list
+        readings = [r for r in readings.values()]
+        return readings
+        
 
     def _handle_error(self):
         """ place holder to remind that we need to add err handling to each class"""
         pass
-
-class OnsetReading(WeatherStationReading):
-    station_id : str
-    request_datetime : datetime or None = None # UTC # should not be null
-    data_datetime : datetime           # UTC
-    atemp : float or None = None       # celsius 
-    pcpn : float or None = None        # mm, > 0
-    relh : float or None = None        # percent

@@ -1,20 +1,12 @@
-"""common set of tests to apply to all types of stations"""
-
-
-# TODO this set of tests uses a new format for .env - use that format in the rest of the codebase
-# and remove this comment
-
-from os import environ
-from datetime import datetime
-import logging
-from dotenv import load_dotenv
-# testing .env
-load_dotenv('tests/.env')
-import json
+"""test_all_station_types.py common set of tests to apply to all types of stations"""
 
 import pytest
-import sys
-
+from datetime import datetime
+import logging
+# from dotenv import load_dotenv
+# # testing .env
+# load_dotenv('tests/.env')
+import json
 
 from ewx_pws.davis import DavisStation, DavisConfig
 from ewx_pws.locomos import LocomosConfig
@@ -24,6 +16,7 @@ from ewx_pws.onset import OnsetStation, OnsetConfig
 from ewx_pws.zentra import ZentraStation, ZentraConfig    
 from ewx_pws.ewx_pws import STATION_CLASS_TYPES, WeatherStation
 
+from ewx_pws.weather_stations import WeatherAPIData, WeatherAPIResponse, WeatherStationReading, WeatherStationReadings
 
 @pytest.fixture
 def station_config_types():
@@ -37,26 +30,6 @@ def station_config_types():
     station_config_types['ZENTRA'] = ZentraConfig 
     yield station_config_types 
 
-
-@pytest.fixture
-def station_configs(station_dict_from_env):
-    """using the env entries data above, reform into dictionaries of config"""
-    # TODO read from csv instead of env file or make env file keyed on STATIONID and not on STATION_TYPE
-     
-    # add generic to .env station_configs = [{'id':'TEST_GENERIC', 'station_type': 'generic', 'config': '{"tz":"ET"}'}]
-    # the env are dict as json str , the method above converts to dict, with 'config' sub-dict
-    # move 'config' sub-dict up a level for Config models
-    configs = {}
-    for station_type in station_dict_from_env:
-        s_config = station_dict_from_env[station_type]
-        # move all fields in sub-dict to top level so we can create a config object
-        s_config.update(s_config['config'])
-        # remove 'config' element no longer needed for specific config
-        s_config['config'] = None
-        # add to our dict of all configs
-        configs[station_type]  = s_config 
-    
-    return configs
 
 @pytest.fixture
 def test_station(station_type, station_configs):
@@ -101,28 +74,49 @@ def test_station_readings(test_station, utc_time_interval):
     sdt,edt = utc_time_interval
 
     # test with hard-coded time
-    readings = test_station.get_readings(start_datetime=sdt,end_datetime=edt)
+    weather_api_data= test_station.get_readings(start_datetime=sdt,end_datetime=edt)
     
     # optional, log outputs for debug
     #use pytest -s to see this output
-    logging.debug(f"{test_station.config.station_type}: {test_station.current_response}\n-----\n{test_station.current_response.content}")
-    # logging.debug('{}\n-----\n{}'.format(vars(test_station.current_response), test_station.current_response.content))
+    # logging.debug(f"{test_station.config.station_type}: {test_station.current_response}")
         
     assert test_station.current_response is not None
-    assert test_station.current_response.status_code == 200
-    assert type(readings) is list
-    assert len(readings) >= 2
-    assert 'station_type' in readings[0].keys()
-    assert readings[0]['station_type'] == test_station.config.station_type
+
+    assert isinstance(test_station.current_response, list)
+    assert test_station.current_response[0].status_code == '200'
+
+    assert isinstance(test_station.current_response[0], WeatherAPIResponse)
+    d = json.loads(test_station.current_response[0].text)
+    assert isinstance(d, dict)
+
+    assert isinstance(test_station.current_response_data, WeatherAPIData) 
+    assert isinstance(weather_api_data.station_type, str)
+    assert weather_api_data.station_type == test_station.config.station_type
+    print(weather_api_data.station_type)
     
-    for i in range(1,len(readings)):
-        resp_datetime = readings[0]['response_datetime_utc' + str(i)]
-        transformed_reading = test_station.transform(data=readings[i], request_datetime=resp_datetime)
-        assert len(transformed_reading.readings) > 0
-        for value in transformed_reading.readings:
-            assert isinstance(value.station_id, str)
-            assert isinstance(value.data_datetime, datetime)
-            assert isinstance(value.atemp, float)
-            assert isinstance(value.pcpn, float)
-            assert isinstance(value.relh, float)
-            #logging.debug('\n{}: {}, {}, {}, {}, {}\n'.format(value.station_id,value.request_datetime,value.data_datetime,value.atemp,value.pcpn,value.relh))
+
+# TODO write test for the subclass _transform method 
+
+def test_transform(test_station, utc_time_interval):
+
+    sdt,edt = utc_time_interval
+
+    # test with hard-coded time
+    weather_api_data = test_station.get_readings(start_datetime=sdt,end_datetime=edt)
+    assert isinstance(weather_api_data.station_type, str)
+    print(weather_api_data.station_type)
+    
+    weather_station_readings = test_station.transform(weather_api_data)
+
+    assert isinstance(weather_station_readings, WeatherStationReadings)
+
+    #pull out the one element
+    assert len(weather_station_readings.readings) > 0
+    
+    for weather_station_reading in weather_station_readings.readings:
+        assert isinstance(weather_station_reading.station_id, str)
+        assert isinstance(weather_station_reading.data_datetime, datetime)
+        assert isinstance(weather_station_reading.atemp, float)
+        assert isinstance(weather_station_reading.pcpn, float)
+        assert isinstance(weather_station_reading.relh, float)
+        #logging.debug('\n{}: {}, {}, {}, {}, {}\n'.format(weather_station_reading.station_id,weather_station_reading.request_datetime,weather_station_reading.data_datetime,weather_station_reading.atemp,weather_station_reading.pcpn,weather_station_reading.relh))

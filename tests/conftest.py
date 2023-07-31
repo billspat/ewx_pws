@@ -1,26 +1,35 @@
-import pytest, random, string, json
+"""conftest.py pytest suite configuration"""
 
+###########################
+## IMPORTS
+
+import pytest, random, string, json
 from os import environ
 import sys
 import importlib
-
+from ewx_pws.ewx_pws import logging
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 # from tempfile import NamedTemporaryFile
+
+
+###########################
+## CONFIG FROM IMPORTED CONSTANTS
+from ewx_pws.weather_stations import STATION_TYPE_LIST
+# TODO improve this obvious kludge to avoid testing these types
+if 'GENERIC' in STATION_TYPE_LIST:
+    STATION_TYPE_LIST.remove('GENERIC')
+
+###########################
+## CONFIG FROM ENVIRONMENT
 from dotenv import load_dotenv
 # project wide .env
 load_dotenv()
 # testing .env
 load_dotenv('tests/.env')
 
-from ewx_pws.weather_stations import STATION_TYPE_LIST
-
-# TODO improve this obvious cludge to avoid testing these types
-STATION_TYPE_LIST.remove('GENERIC')
-
-from ewx_pws.ewx_pws import logging
-from datetime import datetime, timezone
-from zoneinfo import ZoneInfo
-
-
+###########################
+## CONFIG FROM PYTEST COMMAND LINE ARG(S)
 def pytest_addoption(parser):
     parser.addoption(
         "--stationtype",
@@ -30,6 +39,8 @@ def pytest_addoption(parser):
         choices=STATION_TYPE_LIST
     )
 
+###########################
+## PYTEST ITERATE THROUGH ALL STATION TYPES FROM CONFIG
 def pytest_generate_tests(metafunc):
     """parameterize command line options to inject into every test, specifically vendor
     If a vendor is passed on command line, use that, else use all vendors"""
@@ -64,6 +75,8 @@ def pytest_generate_tests(metafunc):
 
         metafunc.parametrize('station_type', testable_station_types)
 
+###########################
+## HANDY VALUES
 @pytest.fixture
 def random_string():
     """pytest fixture returns a string"""
@@ -71,6 +84,27 @@ def random_string():
     letters = string.ascii_lowercase
     return(''.join(random.choice(letters) for i in range(length)))
 
+@pytest.fixture
+def time_interval(tzstr='US/Eastern'):
+    """ returns tuple of localized start/end time that is literal, 1am first of current month"""
+    # TODO make this random day/time within 14d of current time
+    tz = ZoneInfo(tzstr)
+    rn = datetime.now(tz)
+    sdt=datetime(year= rn.year, month = rn.month, day=1, hour=1, minute=0, second=0).astimezone(tz)
+    edt=datetime(year= rn.year, month = rn.month, day=1, hour=1, minute=19, second=0).astimezone(tz)
+
+    return( (sdt,edt) )
+
+@pytest.fixture
+def utc_time_interval(time_interval):
+    """ return an tuple of start/end arbitrary time interval in as timezone.utc time
+    just convert the fixture above to timezone.utc"""
+    s,e = time_interval
+    return( (s.astimezone(timezone.utc), e.astimezone(timezone.utc)))
+ 
+
+###########################
+## CONFIG FROM FIXTURES (made up and real)
 @pytest.fixture
 def fake_stations_list():
     """this is fake data and won't connect to any real station API.  The API keys look real but are made up
@@ -135,9 +169,11 @@ def station_configs(station_dict_from_env):
         # add to our dict of all configs
         configs[station_type]  = s_config 
     
-    return configs
+    yield configs
 
 
+###########################
+## LIST OF STATION SUBCLASSES to work with when iterating on type
 @pytest.fixture
 def station_classes(station_dict_from_env):
     """ this creates a dicitionary of classes by importing the class from module.   
@@ -154,24 +190,9 @@ def station_classes(station_dict_from_env):
         m = importlib.import_module(station_module_name)
         station_class = getattr(m, station_class_name)
         classes[station_type] = station_class
-
-@pytest.fixture
-def time_interval(tzstr='US/Eastern'):
-    """ returns tuple of localized start/end time that is literal, 1am first of current month"""
-
-    # TODO make this random day/time within 14d of current time
-    tz = ZoneInfo(tzstr)
-    rn = datetime.now(tz)
-    sdt=datetime(year= rn.year, month = rn.month, day=1, hour=1, minute=0, second=0).astimezone(tz)
-    edt=datetime(year= rn.year, month = rn.month, day=1, hour=1, minute=19, second=0).astimezone(tz)
-
-    return( (sdt,edt) )
-
-@pytest.fixture
-def utc_time_interval(time_interval):
-    """ return an tuple of start/end arbitrary time interval in as timezone.utc time
-    just convert the fixture above to timezone.utc"""
-    s,e = time_interval
-    return( (s.astimezone(timezone.utc), e.astimezone(timezone.utc)))
     
+    yield classes
+
+
+   
 

@@ -2,10 +2,31 @@
 Module to hold constants, types  and parent class for weather stations.  weather station modules 
 will import this module. 
 
+## data process: 
+
+0. read config from db, given station type ="ONSET"
+1. make station
+   `station = Onset(config)`
+2. set time period
+    s,e UTC timestamps determined by caller
+   `interval = UTCInterval(s,e)` 
+3. make request
+   `api_data = station.get_readings(interval.start, interval.end)  # WeatherAPIData `
+    - store this in the object.  raw responses are saved in api_data.responses 
+
+4. save to raw api data database
+    TBD but could just append to a log raw_api_data_log.append(api_data)
+
+5. transform to tabular data
+    readings = transform(api_data) ( list of weather_readings)
+        call _transform just for response JSON 
+        
+
+
 WeatherStation.getreadings returns a complex type that is a list of dictionary (should it be a class?)
 """
 
-import requests, pytz, json, warnings, logging
+import pytz, json, warnings, logging
 from datetime import datetime, timedelta, timezone
 # from pytz import timezone
 from requests import Response, Request
@@ -18,7 +39,7 @@ from pydantic import BaseModel, Field, ValidationError, validator
 from typing import Literal
 
 # package local
-from ewx_pws.time_intervals import is_tz_aware, is_utc, previous_fourteen_minute_period, DatetimeUTC # previous_fifteen_minute_period, fifteen_minute_mark
+from ewx_pws.time_intervals import is_tz_aware, is_utc, previous_fourteen_minute_period, UTCInterval
 from importlib.metadata import version
 
 ##########################################################
@@ -74,20 +95,99 @@ class datetimeUTC(BaseModel):
     """a datetime object guaranteed to be UTC tz aware"""
     value: datetime 
     @validator('value')
-    def check_datetime_utc(cls, d):
-        assert d.tzinfo == pytz.utc
-        return d
+    def check_datetime_utc(cls, value):
+        assert value.tzinfo == timezone.utc
+        return value
+
+class WeatherAPIResponse(BaseModel):
+    """ extract data elements of a requests.Response for persisting/serializing"""
+    url: str
+    status_code: str
+    reason: str 
+    text: str 
+    content: bytes
+
+    @classmethod
+    def from_response(cls, response:Response):
+        return cls(
+            url =  response.request.url,
+            status_code = response.status_code,
+            reason = response.reason, 
+            text = response.text, 
+            content = response.content
+        )
+
+class WeatherAPIData(BaseModel):
+    """ data structure to hold the raw response data from a request for serialization
+    just the necessary and serializable elements of 
+    requests.Response ( https://requests.readthedocs.io/en/latest/api/#requests.Response ) 
+    along with meta data. 
+    This is use to store the outputs from the API for debugging
+    """
+    
+    station_id: str
+    station_type: str
+    request_id: str = Field(default =str(uuid4()))  # unique ID identifying this request event
+    request_datetime: datetime
+    time_interval: UTCInterval =  None
+    package_version: str  = Field(default = version('ewx_pws'))
+
+    responses: list[WeatherAPIResponse]
 
 class WeatherStationReading(BaseModel):
+    """row of transformed weather data: combination of sensor values  
+    (temperature, etc), and the metadata of their collection 
+    (station, request, etc)request metadata plus transformed data from each API, 
+     suitable for tabular output.  """
     station_id : str
-    request_datetime : datetimeUTC # UTC
-    data_datetime : datetimeUTC    # UTC
+    station_type: str
+    request_id : str # unique ID of the request event to link with raw api output
+    request_datetime : datetime 
+    time_interval: UTCInterval = None
+
+    # TODO error status of these data 
+    # TODO 'source' metadata for each value, 
+    # e.g. atemp_src = "API" or similar
+
+    data_datetime : datetime    
     atemp : float or None       # celsius 
     pcpn : float or None        # mm, > 0
     relh : float or None        # percent
 
+    @validator('request_datetime', 'data_datetime',allow_reuse=True)
+    def check_datetime_utc(cls, field):
+        if is_utc(field):
+            return field
+        raise ValueError("datetime fields must have a timezone and must be UTC")
+    
+    @classmethod
+    def from_transformed_reading(cls, reading, weather_api_data: WeatherAPIData):
+        """ add required metadata to dict of transformed weather data"""
+        reading['station_id']  = weather_api_data.station_id
+        reading['station_type'] = weather_api_data.station_type
+        reading['request_id'] = weather_api_data.request_id
+        reading['request_datetime'] = weather_api_data.request_datetime 
+        
+        return(cls.parse_obj(reading))
+
+
 class WeatherStationReadings(BaseModel):
+    """ list of readings suitable for tabular output,
+    default is an empty list"""
     readings: list[WeatherStationReading] = list()
+
+    @classmethod
+    def from_transformed_readings(cls, transformed_readings, weather_api_data : WeatherAPIData):
+        """a reading above is station/request metadata for each of the 
+        actual outputs from the API, which come as a list from transform
+        Given list of dict of weather data output from transform, 
+        and weather api (meta)data , create a list of reading models"""
+        readings = []
+        for reading in transformed_readings:
+            wsr = WeatherStationReading.from_transformed_reading(reading, weather_api_data)
+            readings.append(wsr)
+        
+        return(cls(readings = readings))
 
 
 ##########################################################
@@ -144,7 +244,7 @@ class WeatherStation(ABC):
             'tz': tz,
             'config': config_dict
         }
-        cls.init_from_dict(station_config_dict)
+        return(cls.init_from_dict(station_config_dict))
                 
     # convenience/hiding methods
     @property
@@ -188,7 +288,7 @@ class WeatherStation(ABC):
         """
         
         return(dt.strftime('%Y-%m-%d %H:%M:%S'))
-        
+    
     def get_readings(self, start_datetime : datetime = None, end_datetime : datetime = None):
         """prepare start/end times and other params generically and then call station-specific method with that.
         start_datetime: date time in UTC time zone
@@ -196,30 +296,27 @@ class WeatherStation(ABC):
         add_to: option for list to be passed in already containing metadata to be added to
         """
         
-        # the time delta in this method is best for the data pipeline
-        if not start_datetime:
-            # use default interval, ignore end_date_time 
-            start_datetime, end_datetime =  previous_fourteen_minute_period()
-        else:
-            if not end_datetime: 
-                # use default interval end time
-                end_datetime = start_datetime + timedelta(minutes= 14)
+        if end_datetime and start_datetime:
+            interval = UTCInterval(start = start_datetime, end = end_datetime)
 
-        # runtime checking that datetime is UTC, will raise an exception if not
-        if not is_utc(start_datetime):
-            raise ValueError("start_datetime must be UTC timezone")
+        elif end_datetime and not start_datetime:
+            interval = UTCInterval.previous_interval(end_datetime)
         
-        if not is_utc(end_datetime):
-            raise ValueError("end_datetime must be UTC timezone")
+        elif not end_datetime and start_datetime: 
+            interval = UTCInterval.previous_interval(start_datetime + timedelta(minutes= 14),delta_mins=14)
         
+        else : # both are null
+            interval = UTCInterval.previous_fifteen_minutes()
+       
         # call the sub-class to pull data from the station vendor API
         # save the response object in this object
         try:
-            request_time = datetime.utcnow()
+            request_time = datetime.utcnow().astimezone(timezone.utc)
             responses = self._get_readings(
-                    start_datetime = start_datetime,
-                    end_datetime = end_datetime
+                    start_datetime = interval.start,
+                    end_datetime = interval.end
             )
+
         except Exception as e:
             logging.error("Error getting reading from station {self.id}: {e}")
             raise e
@@ -227,87 +324,72 @@ class WeatherStation(ABC):
         # ensure what is returned is a list, as some stations types return a list of responses
         if not isinstance(responses, list):
             responses = [responses]
-        
-        # save in object
-        self.current_response = responses 
+            # list of requests.response obj
 
-        # format the raw data and meta data into standard and save in object 
-        self.current_response_data = self.compose_response_data(start_datetime, end_datetime, self.current_response)
+        # convert each to our serializer model 
+        weather_api_responses = [WeatherAPIResponse.from_response(r) for r in responses]
+
+        # save serializable response list and metadata in the object for debugging
+        self.current_response = weather_api_responses
+        self.current_response_data = WeatherAPIData(
+            request_id = str(uuid4()), 
+            station_id = self.id,
+            station_type = self.config.station_type,
+            request_datetime = request_time,
+            time_interval = interval,
+            responses = weather_api_responses,
+            package_version  = 0.1 # version('ewx_pws')
+        )
 
         return(self.current_response_data)
 
 
-    def compose_response_data(self, start_datetime, end_datetime, responses=None):
-        """data structure to hold meta data and response content/data.  can be used to serialize response
-        This is the format required by the transform methods"""
-        
-        responses = responses or self.current_response
-
-        if responses is None:
-            raise ValueError("no response data yet available from get_readings")
-        
-        response_data = {
-            # unique id to join raw and transformed data
-            "request_id" : uuid4(),
-            # time the request was made (approximately)
-            "request_datetime_utc": datetime.utcnow(), # TODO use responses[0].headers['Date']
-            
-            "station_type": self.config.station_type,
-            "station_id": self.config.station_id,
-            "timezone": self.config.tz, 
-
-            "start_datetime": start_datetime,
-            "end_datetime": end_datetime,
-            "package_version": version('ewx_pws'),
- 
-        }
-        
-        # initialize station specific modifications/additions if necessary
-        response_data['api_responses'] = self._compose_response_data(responses)
-        
-        self.current_response_data = response_data
-        
-        return response_data
-    
-    # override-able response deconstructor
-    def _compose_response_data(self, responses):
-        """ Default content pull for stations, assume content is JSON.  Override for specific station types
-        """
-
-        if not isinstance(responses, list):
-            responses = [responses]
-
-        responses_content = [ json.loads(r.content) for r in responses] 
-        
-        return(responses_content)  
-    
-
-    def transform(self, response_data = None):
+    def transform(self, api_data = None):
         """
         Transforms data and return it in a standardized format. 
         data: optional input used to load in data if transform of existing data dictionary is required.
+        Usage from stored data
+        dict_api_record = db.get_by_data(something) or get_by_req_id(request_id)
+        api_data = optional WeatherAPIData (object or dict)
         """
-        # TODO type checking to ensure all the data elements needed are present 
 
-        # use either input param, object variable
-        response_data = response_data or self.current_response_data
+        # if no data was sent, use data stored from latest request
+        api_data = api_data or self.current_response_data
 
-        if response_data is None:
-            return None
-        else:
-            return self._transform(response_data)
-
+        # weather data must be in special format for this to work
+        # this will raise exception if it's not formatted correctly
+        if api_data is not None and not isinstance(api_data, WeatherAPIData) :
+            # assuming api_data was unserialized (CSV, db, etc), build the 
+            # data class that holds it
+            # this will raise exceptions if data is not in correct format
+            api_data = WeatherAPIData.parse_obj(api_data)
+        
+        # responses are store in array since some stations return an array (one element per day)
+        # each array item when transformed will output  list of data values
+        transformed_readings = []
+        for weather_api_response in api_data.responses:
+            # call station subclass to interpret response content into a list
+            tr =  self._transform(weather_api_response.text) # or content
+            logging.debug(f"transformed_reading type {type(tr)}: {tr}")
+            if tr is not None:
+                transformed_readings.extend(tr)
+  
+        # use data model class method to combine meta data and reading values
+        readings = WeatherStationReadings.from_transformed_readings(transformed_readings, api_data)
+        return readings
+        
 
     def dt_utc_from_str(self, datetime_str: str, in_tz: timezone = None):
         # Creates a UTC timezone aware datetime from a string and an optional timezone
         # If a timezone is passed, UTC is still returned, just adjusted for the input being a different TZ
         dt = datetime.fromisoformat(datetime_str)
-        # if not in_tz:
-        #     return datetimeUTC(value=pytz.utc.localize(dt))
+        if not in_tz:
+            return datetimeUTC(value=pytz.utc.localize(dt))
         if not is_tz_aware(dt):
             dt =  pytz.timezone(self.config.pytz()).localize(dt)
             
         return dt.astimezone(timezone.utc) # datetimeUTC(value=in_tz.localize(dt).astimezone(pytz.utc))
+
 
     def get_readings_local(self, start_datetime_local: datetime, end_datetime_local: datetime, add_to=None):
         """ get reading for the timezone of the station.  This will be problematic for DST readings
@@ -327,7 +409,6 @@ class WeatherStation(ABC):
         start_datetime_utc = correct_tz(start_datetime_local).astimezone(timezone.utc)
         end_datetime_utc   = correct_tz(end_datetime_local).astimezone(timezone.utc)
         return self.get_readings(start_datetime=start_datetime_utc, end_datetime=end_datetime_utc, add_to=add_to)
-
 
         
     def get_test_reading(self):
