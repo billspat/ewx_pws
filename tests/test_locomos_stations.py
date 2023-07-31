@@ -1,9 +1,8 @@
 """LOCOMOS specific station tests"""
 
 from ewx_pws.locomos import LocomosStation, WeatherStation
-import datetime
-import json
-import pytest
+from ewx_pws.weather_stations import WeatherAPIData, WeatherAPIResponse
+import datetime, json, logging, pytest
 
 @pytest.fixture
 def locomos_station(station_configs):
@@ -24,16 +23,16 @@ def test_locomos_station(station_configs):
 def test_locomos_variable_listing(station_configs):
     station = LocomosStation.init_from_dict(station_configs['LOCOMOS'])
     # empty to start
-    assert station.var_list == {}
+    assert station.variables == {}
 
-    station._get_variable_list()
-    assert len(station.var_list) > 0 
+    station._get_variables()
+    assert len(station.variables) > 0 
 
-    var_names = station.var_list.keys()
+    var_names = station.variables.values()
     assert 'precip' in var_names
     assert 'lws' in var_names
     assert 'temperature' in var_names
-    print(station.var_list)
+    print(station.variables)
 
 
 def test_locomos_api_details(locomos_station):
@@ -74,18 +73,19 @@ def test_locomos_api_details(locomos_station):
  
 def test_locomos_readings(locomos_station,times_for_broken_locomos):
     """ test the current sub-class can pull readings, but use the time period when the test station was actually active. """
-    readings = locomos_station.get_readings(start_datetime=times_for_broken_locomos['start'], end_datetime=times_for_broken_locomos['end'])
-    print(readings)
-    assert readings is not None
+    weather_api_data = locomos_station.get_readings(start_datetime=times_for_broken_locomos['start'], end_datetime=times_for_broken_locomos['end'])
+    logging.debug(weather_api_data)
+    assert weather_api_data is not None
 
-    r = readings[1].get('data')
-    assert 'precip' in r.keys()
-    assert 'lws' in r.keys()
-    assert 'temperature' in r.keys()
+    assert isinstance(weather_api_data, WeatherAPIData)
+    responses = weather_api_data.responses
+    assert isinstance(responses, list)
+    response = responses[0]
+    assert isinstance(response, WeatherAPIResponse)
 
-    tlist =  json.loads(r['temperature'])
-    
-    assert 'results' in tlist.keys()
-    
-    # tdata = tlist['results'][0]
+    readings = json.loads(response.text)
+    assert 'results' in readings.keys()
+    assert 'columns' in readings.keys()
+    assert len(readings['results']) > 0 
+
 

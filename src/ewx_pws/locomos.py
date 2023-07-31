@@ -1,8 +1,8 @@
-import time, json, pytz
+import logging, json
 from requests import post, Session, Request
 from datetime import datetime, timezone
 
-from ewx_pws.weather_stations import WeatherStationConfig, WeatherStationReading, WeatherStationReadings, WeatherStation, STATION_TYPE
+from ewx_pws.weather_stations import WeatherStationConfig, WeatherStationReading, WeatherStation, STATION_TYPE
 
 class LocomosConfig(WeatherStationConfig):
         station_id     : str
@@ -110,62 +110,72 @@ class LocomosStation(WeatherStation):
                             json=request_params)
         
         return(response)
-    
-        # data[var] = json.loads(response.content)
-        # convert structure to json to match other 
-        # self.current_response = [data]
-
-        # return self.current_response
 
 
-    def _transform(self, data=None, request_datetime: datetime = None):
+    def _transform(self, response_data=None)->list:
         """
-        Transforms data into a standardized format and returns it as a WeatherStationReadings object.
-        data param if left to default tries for self.response_data processing
+        Transforms response text from Zentra API into a standardized format 
+        params:
+            response_data : JSON string from response.text or dict 
+        returns:
+            list of dict for each sensor reading
         """
-        readings_list = WeatherStationReadings()
 
-        results = data['data']
-        if 'precip' not in results.keys() or 'humidity' not in results.keys() or 'temperature' not in results.keys():
-            return readings_list
-        timestamps = []
-        for key in ['precip', 'humidity', 'temperature']:
-            for entry in results[key]['results']:
-                if entry['timestamp'] not in timestamps:
-                    timestamps.append(entry['timestamp'])
-        timestamps.sort()
-        for timestamp in timestamps:
-            temp = None
-            precip = None
-            humidity = None
-            for result in results['precip']['results']:
-                if result['timestamp'] == timestamp:
-                    precip = result['value']
-            for result in results['temperature']['results']:
-                if result['timestamp'] == timestamp:
-                    temp = result['value']
-            for result in results['humidity']['results']:
-                if result['timestamp'] == timestamp:
-                    humidity = result['value']
+        if isinstance(response_data, str):
+            response_data = json.loads(response_data)
 
-            temp = LocomosReading(station_id=data['station_id'],
-                                    request_datetime=request_datetime,
-                                    data_datetime=datetime.fromtimestamp(timestamp / 1000).astimezone(timezone.utc),
-                                    atemp=temp,
-                                    pcpn=round(precip * 25.4, 2),
-                                    relh=humidity)
-            readings_list.readings.append(temp)
-            
-        return readings_list
+        readings_list = [] # WeatherStationReadings()
+
+        #### step 1
+        # re-orient the ubidots output (one list per sensor) to rows of dict  ( one per sensor)
+        # with columnnames 
+        r = response_data['results'] # this contains all the values but no colum names
+        c = response_data['columns'] # these are the column names for corresponding vals
+
+        # strip off device id from columns since we don't need that
+        def rm_dev_id(colname, delim = "."):
+            if(delim in colname):
+                colname = delim.join(colname.split('.')[1:])
+            return(colname)
+
+        # ubidots returns lists of lists 
+        # 'cell' is data record from a single sensor/device
+        # cells is list of all records flattened together,keys on column name
+        cells = []
+        for i in range(0,len(r)): # for i in 1..len(r):
+            cnames = [ rm_dev_id(c) for c in c[i]]
+            for j in range(0, len(r[i])):
+                cells.append(dict(zip(cnames, r[i][j])))
+
+        #### step 2
+        # convert cells (single sensor value ) to rows (values for all sensors)
+        # rows are keyed on timestamp the reading was taken
+        rows = {}
+        for cell in cells:
+            # build up row keys as we 
+            if cell['timestamp'] not in rows.keys():
+                rows[cell['timestamp']] = {'timestamp': cell['timestamp']}
+
+            key = cell['variable.name']
+            value = cell['value.value']
+            rows[cell['timestamp']][key] =  value
+
+        #### step 3
+        # convert each row to format used by ewx
+        readings = []
+        for row in rows.values():
+            reading = {
+                # TODO add leaf wetness here and in data model
+                'data_datetime':datetime.fromtimestamp(row['timestamp'] / 1000).astimezone(timezone.utc),
+                'atemp':row['Temperature (C)'],
+                'pcpn':round(row['Precipitation (in)'] * 25.4, 2),
+                'relh':row['Humidity (%)']
+            }
+            readings.append(reading)
+
+        return readings
 
     def _handle_error(self):
         """ place holder to remind that we need to add err handling to each class"""
         pass
 
-class LocomosReading(WeatherStationReading):
-    station_id : str
-    request_datetime : datetime or None = None # UTC
-    data_datetime : datetime           # UTC
-    atemp : float or None = None       # celsius 
-    pcpn : float or None = None        # mm, > 0
-    relh : float or None = None        # percent
