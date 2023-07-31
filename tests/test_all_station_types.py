@@ -1,7 +1,7 @@
 """test_all_station_types.py common set of tests to apply to all types of stations"""
 
 import pytest
-from datetime import datetime
+from datetime import datetime, timezone
 import logging
 # from dotenv import load_dotenv
 # # testing .env
@@ -64,14 +64,25 @@ def test_station_class_instantiation_from_config(station_configs, station_type):
     station = STATION_CLASS_TYPES[station_type].init_from_dict(station_configs[station_type])
     assert isinstance(station, WeatherStation)
     assert isinstance(station.id, str)
-      
-def test_station_readings(test_station, utc_time_interval):
+
+@pytest.fixture
+def interval_for_broken_locomos():
+    sdt=datetime(year= 2023, month = 3, day=19, hour=1, minute=0, second=0).astimezone(timezone.utc)
+    edt=datetime(year= 2023, month = 3, day=19, hour=1, minute=30, second=0).astimezone(timezone.utc)
+    yield ( (sdt,edt))
+ 
+
+def test_station_readings(test_station, utc_time_interval, interval_for_broken_locomos):
     
     # first just check that our test station has a non-zero length station_type and is one on the list
     assert len(test_station.config.station_type) > 0 
     assert test_station.config.station_type in STATION_CLASS_TYPES
 
-    sdt,edt = utc_time_interval
+    # KLUDGE TO DEAL WITH BROKEN LOCOMOS STATION
+    if test_station.config.station_type == 'LOCOMOS':
+        sdt,edt = interval_for_broken_locomos
+    else:
+        sdt,edt = utc_time_interval
 
     ######## READING TESTS
     weather_api_data= test_station.get_readings(start_datetime=sdt,end_datetime=edt)
