@@ -73,11 +73,9 @@ def test_station_readings(test_station, utc_time_interval):
 
     sdt,edt = utc_time_interval
 
-    # test with hard-coded time
+    ######## READING TESTS
     weather_api_data= test_station.get_readings(start_datetime=sdt,end_datetime=edt)
     
-    # optional, log outputs for debug
-    #use pytest -s to see this output
     # logging.debug(f"{test_station.config.station_type}: {test_station.current_response}")
         
     assert test_station.current_response is not None
@@ -94,18 +92,7 @@ def test_station_readings(test_station, utc_time_interval):
     assert weather_api_data.station_type == test_station.config.station_type
     print(weather_api_data.station_type)
     
-
-# TODO write test for the subclass _transform method 
-
-def test_transform(test_station, utc_time_interval):
-
-    sdt,edt = utc_time_interval
-
-    # test with hard-coded time
-    weather_api_data = test_station.get_readings(start_datetime=sdt,end_datetime=edt)
-    assert isinstance(weather_api_data.station_type, str)
-    print(weather_api_data.station_type)
-    
+    ###### TRANSFORM TESTS
     weather_station_readings = test_station.transform(weather_api_data)
 
     assert isinstance(weather_station_readings, WeatherStationReadings)
@@ -113,6 +100,8 @@ def test_transform(test_station, utc_time_interval):
     #pull out the one element
     assert len(weather_station_readings.readings) > 0
     
+    # print first element 
+    logging.debug(weather_station_readings.readings[0])
     for weather_station_reading in weather_station_readings.readings:
         assert isinstance(weather_station_reading.station_id, str)
         assert isinstance(weather_station_reading.data_datetime, datetime)
