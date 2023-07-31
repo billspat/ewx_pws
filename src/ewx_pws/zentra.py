@@ -1,19 +1,19 @@
 
-# ZENTRA WIP
+# ZENTRA
 
-import json,pytz,time, logging
+import json, logging, time
 from requests import Session, Request
 from datetime import datetime, timezone
+import pytz # instead of zone info to be able to use current config timezone codes 
 
-from pydantic import Field
-from ewx_pws.weather_stations import WeatherStationConfig, WeatherStationReading, WeatherStationReadings, WeatherStation, STATION_TYPE
+from ewx_pws.weather_stations import WeatherStationConfig, WeatherStation, STATION_TYPE
 
 class ZentraConfig(WeatherStationConfig):
         station_id     : str
         station_type   : STATION_TYPE = 'ZENTRA'
         sn             : str #  The serial number of the device.
         token          : str # The user's access token.
-        tz             : str = 'ET' #  The time zone.  Defaults to Eastern Time.
+        tz             : str
 
 class ZentraStation(WeatherStation):
     @classmethod
@@ -40,8 +40,11 @@ class ZentraStation(WeatherStation):
     def _check_config(self):
         return True
     
-    def _get_readings(self, start_datetime:datetime, end_datetime:datetime, start_mrid=None, end_mrid=None):
-        """ Builds, sends, and stores raw response from Zentra API"""
+    def _get_readings(self, start_datetime:datetime, end_datetime:datetime, start_mrid=None, end_mrid=None)->list:
+        """ Builds, sends, and stores raw response from Zentra API
+        start_datetime, end_datetime : timezone aware datetimes in UTC
+        start_mrid, end_mrid = ???
+        """
         self.current_api_request = Request('GET',
                                url='https://zentracloud.com/api/v3/get_readings',
                                headers={
@@ -52,60 +55,74 @@ class ZentraStation(WeatherStation):
                                        'start_mrid': start_mrid,
                                        'end_mrid': end_mrid}).prepare()
         
-        self.current_response = Session().send(self.current_api_request)
+        response = Session().send(self.current_api_request)
 
         # Handles the 1 request/60 second throttling error
         retry_counter = 0
-        while self.current_response.status_code == 429 and self.max_retries > 0:
+        while response.status_code == 429 and self.max_retries > 0:
             retry_counter += 1
             if retry_counter > self.max_retries:
                 err_message = f"Zentra timed out {self.max_retries} times"
                 raise RuntimeError(err_message) 
 
-            lockout = int(self.current_response.text[self.current_response.text.find("Lock out expires in ")+20:self.current_response.text.find("Lock out expires in ")+22])
+            lockout = int(response.text[response.text.find("Lock out expires in ")+20:response.text.find("Lock out expires in ")+22])
             
             logging.warning("Error received for too frequent attempts, retrying in {} seconds...".format(lockout+1))
 
             time.sleep(lockout + 1)
 
-            self.current_response = Session().send(self.current_api_request)
+            response = Session().send(self.current_api_request)
 
-        return([json.loads(self.current_response.content)])
+        return(response)
 
-    def _transform(self, data = None, request_datetime: datetime = None):
+    def _transform(self, response_data):
         """
-        Transforms data into a standardized format and returns it as a WeatherStationReadings object.
-        data param if left to default tries for self.response_data processing
+        Transforms response text from Zentra API into a standardized format 
+        params:
+            response_data : JSON string from response.text or dict 
+        returns:
+            list of dict for each sensor reading
         """
-        readings_list = WeatherStationReadings()
+        
+        if isinstance(response_data, str):
+            response_data = json.loads(response_data)
 
         # Return an empty list if there is no data contained in the response, this covers error 429
-        if 'data' not in data.keys():
-            return readings_list
+        print(response_data)
+
+        if 'data' not in response_data.keys():
+            logging.debug("data element not found in response_data (returning empty):")
+            logging.debug(response_data)
+            return []
+        else:
+            logging.debug("Zentra readings found")
         
+        readings = []
         # Build a ZentraReading object for each and put it into the readings_list
-        for reading in data['data']['Air Temperature'][0]['readings']:
-            temp = ZentraReading(station_id=data['data']['Air Temperature'][0]['metadata']['device_name'],request_datetime=request_datetime, data_datetime=pytz.utc.localize(datetime.fromtimestamp(reading['timestamp_utc'])))
-            temp.atemp = reading['value']
-            timestamp = reading['timestamp_utc']
-            for reading2 in data['data']['Precipitation'][0]['readings']:
-                if reading2['timestamp_utc'] == timestamp:
-                    temp.pcpn = reading2['value']
-            for reading2 in data['data']['Relative Humidity'][0]['readings']:
-                if reading2['timestamp_utc'] == timestamp:
-                    temp.relh = reading2['value']
-            readings_list.readings.append(temp)
+        for reading in response_data['data']['Air Temperature'][0]['readings']:
             
-        return readings_list
+            # timestamp to use as an index to find associated sensor values
+            timestamp = reading['timestamp_utc']
+
+            # dict to hold the sensor values
+            timestamped_reading = {}
+            timestamped_reading['data_datetime'] = datetime.fromtimestamp(reading['timestamp_utc']).astimezone(timezone.utc)
+            timestamped_reading['atemp'] = reading['value']
+
+            for reading2 in response_data['data']['Precipitation'][0]['readings']:
+                # this appears to be able to read multiple values, overwriting until the last
+                # rewwrite to extract without looping
+                if reading2['timestamp_utc'] == timestamp:
+                    timestamped_reading['pcpn'] = reading2['value']
+            for reading2 in response_data['data']['Relative Humidity'][0]['readings']:
+                # this appears to be able to read multiple values, overwriting until the last
+                if reading2['timestamp_utc'] == timestamp:
+                    timestamped_reading['relh'] = reading2['value']
+            
+            readings.append(timestamped_reading)
+            
+        return readings
     
     def _handle_error(self):
         """ place holder to remind that we need to add err handling to each class"""
         pass
-
-class ZentraReading(WeatherStationReading):
-    station_id : str
-    request_datetime : datetime or None = None # UTC
-    data_datetime : datetime           # UTC
-    atemp : float or None = None       # celsius 
-    pcpn : float or None = None        # mm, > 0
-    relh : float or None = None        # percent
