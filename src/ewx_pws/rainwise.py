@@ -1,7 +1,7 @@
-# RAINWISE WIP ###################
+# RAINWISE ###################
 
 import json, pytz
-from requests import Session, Request
+from requests import get, Session, Request
 from datetime import datetime, timezone
 
 from ewx_pws.weather_stations import WeatherStationConfig, WeatherStationReading, WeatherStationReadings, WeatherStation, STATION_TYPE
@@ -41,49 +41,44 @@ class RainwiseStation(WeatherStation):
         add_to: option for list to be passed in already containing metadata to be added to
         Returns api response in a list with metadata
         """
-        self.current_api_request = Request('GET',
-                               url='http://api.rainwise.net/main/v1.5/registered/get-historical.php',
-                               params={'username': self.config.username,
-                                       'sid': self.config.sid,
-                                       'pid': self.config.pid,
-                                       'mac': self.config.mac,
-                                       'format': self.config.ret_form,
-                                       'interval': interval,
-                                       'sdate': start_datetime,
-                                       'edate': end_datetime}).prepare()
-        self.current_response = Session().send(self.current_api_request)
-        return [json.loads(self.current_response.content)]
+        
+        response = get( url='http://api.rainwise.net/main/v1.5/registered/get-historical.php',
+                        params={'username': self.config.username,
+                                'sid': self.config.sid,
+                                'pid': self.config.pid,
+                                'mac': self.config.mac,
+                                'format': self.config.ret_form,
+                                'interval': interval,
+                                'sdate': start_datetime,
+                                'edate': end_datetime})
+
+        return response
 
 
-    def _transform(self, data=None, request_datetime: datetime = None):
+    def _transform(self, response_data):
         """
         Transforms data into a standardized format and returns it as a WeatherStationReadings object.
         data param if left to default tries for self.response_data processing
         """
-        readings_list = WeatherStationReadings()
 
         # Return an empty list if there is no data contained in the response, this covers error 429
-        if 'station_id' not in data.keys():
-            return readings_list
-        for key in data['times']:
-            temp = RainwiseReading(station_id=data['station_id'],
-                            request_datetime=request_datetime,
-                            data_datetime=self.dt_utc_from_str(data['times'][key]),
-                            atemp=round((float(data['temp'][key]) - 32) * 5/9, 2),
-                            pcpn=round(float(data['precip'][key]) * 25.4, 2),
-                            relh=round(float(data['hum'][key]), 2))
-            readings_list.readings.append(temp)
+        if 'station_id' not in response_data.keys():
+            return []
+
+        readings = []        
+        for key in response_data['times']:
+            reading = {
+                    'data_datetime' : self.dt_utc_from_str(response_data['times'][key]),
+                    'atemp': round((float(response_data['temp'][key]) - 32) * 5/9, 2),
+                    'pcpn' : round(float(response_data['precip'][key]) * 25.4, 2),
+                    'relh' : round(float(response_data['hum'][key]), 2)
+                    }
             
-        return readings_list
+            readings.append(reading)
+            
+        return readings
 
     def _handle_error(self):
         """ place holder to remind that we need to add err handling to each class"""
         pass
 
-class RainwiseReading(WeatherStationReading):
-    station_id : str
-    request_datetime : datetime or None = None # UTC
-    data_datetime : datetime           # UTC
-    atemp : float or None = None       # celsius 
-    pcpn : float or None = None        # mm, > 0
-    relh : float or None = None        # percent
