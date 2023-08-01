@@ -85,28 +85,19 @@ class OnsetStation(WeatherStation):
         self.access_token = response['access_token']
         return self.access_token    
 
-    def _get_readings(self,start_datetime:datetime,end_datetime:datetime)->list:
+    def _get_readings(self,start_datetime:datetime,end_datetime:datetime):
         """ use Onset API to pull data from this station for times between start and end.  Called by the parent 
         class method get_readings().   
         
         parameters:
-        start_datetime: datetime object in UTC timezone.  Does not have to have a timezone but must be UTC
-        end_datetime: datetime object in UTC timezone.  Does not have to have a timezone but must be UTC
+            start_datetime: datetime object in UTC timezone.  
+            end_datetime: datetime object in UTC timezone.  
         """
-            
+    
         access_token = self._get_auth() 
             
         start_datetime_str = self._format_time(start_datetime)
         end_datetime_str = self._format_time(end_datetime)
-            
-        # self.current_api_request = Request('GET',
-        #         url=f"https://webservice.hobolink.com/ws/data/file/{self.config.ret_form}/user/{self.config.user_id}",
-        #         headers={'Authorization': "Bearer " + access_token},
-        #         params={'loggers': self.config.sn,
-        #             'start_date_time': start_datetime_str,
-        #             'end_date_time': end_datetime_str}).prepare()
-                
-        # response = Session().send(self.current_api_request)
 
         response = get( url=f"https://webservice.hobolink.com/ws/data/file/{self.config.ret_form}/user/{self.config.user_id}",
                         headers={'Authorization': "Bearer " + access_token},

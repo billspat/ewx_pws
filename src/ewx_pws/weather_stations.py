@@ -369,7 +369,7 @@ class WeatherStation(ABC):
         transformed_readings = []
         for weather_api_response in api_data.responses:
             # call station subclass to interpret response content into a list
-            tr =  self._transform(weather_api_response.text) # or content
+            tr =  self._transform(weather_api_response.text) # JSON str
             logging.debug(f"transformed_reading type {type(tr)}: {tr}")
             if tr is not None:
                 transformed_readings.extend(tr)

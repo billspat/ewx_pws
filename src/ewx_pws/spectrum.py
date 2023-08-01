@@ -29,7 +29,6 @@ class SpectrumStation(WeatherStation):
     def _check_config(self,start_datetime, end_datetime):
         return True
     
-    #TODO require this dt sent to this method is UTC tz
     def _format_time(self, dt:datetime)->str:
         """
         format date/time parameter for specconnect API request
@@ -41,7 +40,6 @@ class SpectrumStation(WeatherStation):
         # convert UTC date to timezone of station for request
         # use the converter in config obj to get python-friendly tz string
         dt = dt.replace(tzinfo=timezone.utc).astimezone(pytz.timezone(self.config.pytz()))
-        
  
         return(dt.strftime('%m-%d-%Y %H:%M'))
     
@@ -92,10 +90,3 @@ class SpectrumStation(WeatherStation):
         """ place holder to remind that we need to add err handling to each class"""
         pass
 
-class SpectrumReading(WeatherStationReading):
-    station_id : str
-    request_datetime : datetime or None = None # UTC
-    data_datetime : datetime           # UTC
-    atemp : float or None = None       # celsius 
-    pcpn : float or None = None        # mm, > 0
-    relh : float or None = None        # percent
