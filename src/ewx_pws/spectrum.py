@@ -1,6 +1,6 @@
 
 import json,pytz
-from requests import Session, Request
+from requests import get, Session, Request
 from datetime import datetime, timezone
 
 from pydantic import Field
@@ -46,37 +46,47 @@ class SpectrumStation(WeatherStation):
         return(dt.strftime('%m-%d-%Y %H:%M'))
     
     def _get_readings(self,start_datetime:datetime, end_datetime:datetime):
-        """ request weather data from the specconnect API for a range of dates"""
+        """ request weather data from the specconnect API for a range of dates
+        
+        parameters:
+            start_datetime: datetime object in UTC timezone.  
+            end_datetime: datetime object in UTC timezone.  
+        """
         start_datetime_str = self._format_time(start_datetime)
         end_datetime_str = self._format_time(end_datetime)
         
-        self.current_api_request = Request('GET',
-                                   url='https://api.specconnect.net:6703/api/Customer/GetDataInDateTimeRange',
-                                   params={'customerApiKey': self.config.apikey, 'serialNumber': self.config.sn,
-                                           'startDate': start_datetime_str, 'endDate': end_datetime_str}).prepare()
-        self.current_response = Session().send(self.current_api_request)
-        return([json.loads(self.current_response.content)])
+        response = get( url='https://api.specconnect.net:6703/api/Customer/GetDataInDateTimeRange',
+                        params={'customerApiKey': self.config.apikey, 
+                                'serialNumber': self.config.sn,
+                                'startDate': start_datetime_str, 
+                                'endDate': end_datetime_str}
+                        )
+        
+        return(response)
 
-    def _transform(self, data=None, request_datetime: datetime = None):
+    def _transform(self, response_data):
         """
         Transforms data into a standardized format and returns it as a WeatherStationReadings object.
         data param if left to default tries for self.response_data processing
         """
-        readings_list = WeatherStationReadings()
+        
+        if isinstance(response_data,str):
+            response_data = json.loads(response_data)
 
-        if 'EquipmentRecords' not in data.keys():
-            return readings_list
-        for record in data['EquipmentRecords']:
-            temp = SpectrumReading(station_id=record['SerialNumber'],
-                            request_datetime=request_datetime,
-                            data_datetime=self.dt_utc_from_str(record['TimeStamp'], 
-                                                                pytz.timezone(self.config.pytz())),
-                            atemp=round((record['SensorData'][1]["DecimalValue"] - 32) * 5 / 9, 2),
-                            pcpn=round(record['SensorData'][0]["DecimalValue"] * 25.4, 2),
-                            relh=round(record['SensorData'][2]["DecimalValue"], 2))
-            readings_list.readings.append(temp)
+        if 'EquipmentRecords' not in response_data.keys():
+            return []
+        
+        readings = []
+        for record in response_data['EquipmentRecords']:
+            reading = { 'data_datetime': self.dt_utc_from_str(record['TimeStamp'], pytz.timezone(self.config.pytz())),
+                        'atemp': round((record['SensorData'][1]["DecimalValue"] - 32) * 5 / 9, 2),
+                        'pcpn' : round(record['SensorData'][0]["DecimalValue"] * 25.4, 2),
+                        'relh' : round(record['SensorData'][2]["DecimalValue"], 2)
+            }
 
-        return readings_list
+            readings.append(reading)
+
+        return readings
 
     def _handle_error(self):
         """ place holder to remind that we need to add err handling to each class"""
