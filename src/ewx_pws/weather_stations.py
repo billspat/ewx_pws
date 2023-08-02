@@ -91,15 +91,6 @@ class GenericConfig(WeatherStationConfig):
     in a dictionary"""
     config:dict = {}
 
-
-class datetimeUTC(BaseModel):
-    """a datetime object guaranteed to be UTC tz aware"""
-    value: datetime 
-    @validator('value')
-    def check_datetime_utc(cls, value):
-        assert value.tzinfo == timezone.utc
-        return value
-
 class WeatherAPIResponse(BaseModel):
     """ extract data elements of a requests.Response for persisting/serializing"""
     url: str

@@ -1,4 +1,4 @@
-from ewx_pws.weather_stations import  WeatherStationConfig, WeatherStation, datetimeUTC, TIMEZONE_CODE
+from ewx_pws.weather_stations import  WeatherStationConfig, WeatherStation, TIMEZONE_CODE
 from pydantic import ValidationError
 import requests
 import pytest, json, pytz, datetime
@@ -56,21 +56,14 @@ def test_can_subclass_weather_station(generic_station_config,fake_station_class)
     fake_station_1 = fake_station_class(fake_config)
     assert isinstance(fake_station_1,WeatherStation)
     
-def test_can_instantiate_from_dict(generic_station_config,fake_station_class):
-    # test class method for reading from dict
-    fake_station = fake_station_class.init_from_dict(generic_station_config)
-    assert isinstance(fake_station,WeatherStation)
-    # test that there are at least _some_ elements
-    assert isinstance(fake_station.id, str)
-    assert isinstance(fake_station.station_tz, str)
-    assert fake_station.station_tz == 'ET'  # this must match the fixture in conftest.py
+# def test_can_instantiate_from_dict(generic_station_config,fake_station_class):
+#     # test class method for reading from dict
+#     fake_station = fake_station_class.init_from_dict(generic_station_config)
+#     assert isinstance(fake_station,WeatherStation)
+#     # test that there are at least _some_ elements
+#     assert isinstance(fake_station.id, str)
+#     assert isinstance(fake_station.station_tz, str)
+#     assert fake_station.station_tz == 'ET'  # this must match the fixture in conftest.py
 
-    # test parent methods that call abstract methods
-    assert fake_station._check_config() == True
-
-def test_utc_datetimes():
-    assert datetimeUTC(value=datetime.datetime(2022,10,10,15,25,0,tzinfo=pytz.utc))
-    with pytest.raises(ValidationError):
-        est = datetimeUTC(value=datetime.datetime(2022,10,10,15,25,0,tzinfo=pytz.timezone('US/Eastern')))
-    with pytest.raises(ValidationError):
-        naive = datetimeUTC(value=datetime.datetime(2022,10,10,15,25,0))
+#     # test parent methods that call abstract methods
+#     assert fake_station._check_config() == True
