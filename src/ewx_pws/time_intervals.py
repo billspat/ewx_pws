@@ -23,6 +23,14 @@ def is_utc(dt:datetime)->bool:
     return True
 
 
+class datetimeUTC(BaseModel):
+    """a datetime object guaranteed to be UTC tz aware"""
+    value: datetime 
+    @validator('value')
+    def check_datetime_utc(cls, value):
+        assert is_utc(value)
+        return value
+    
 class UTCInterval(BaseModel):
     """ datetime interval that requires user to supply UTC datetimes.  
     Useful for passing start and end times into functions"""

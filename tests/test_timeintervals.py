@@ -7,7 +7,7 @@ from pydantic import ValidationError
 
 from ewx_pws import time_intervals
 from ewx_pws.time_intervals import fifteen_minute_mark,previous_fifteen_minute_period, previous_fourteen_minute_period
-from ewx_pws.time_intervals import is_utc, UTCInterval
+from ewx_pws.time_intervals import is_utc, UTCInterval, datetimeUTC
 
 
 @pytest.fixture
@@ -113,6 +113,13 @@ def test_previous_interval():
     assert is_utc(interval.end)
     # note not "less than or equal" - don't allow zero intervals
     assert interval.start < interval.end 
+
+def test_utc_datetimes():
+    assert datetimeUTC(value=datetime(2022,10,10,15,25,0,tzinfo=timezone.utc))
+    with pytest.raises(ValidationError):
+        est = datetimeUTC(value=datetime(2022,10,10,15,25,0,tzinfo=ZoneInfo('US/Eastern')))
+    with pytest.raises(ValidationError):
+        naive = datetimeUTC(value=datetime(2022,10,10,15,25,0))
 
 # def test_datetimeutc():
 #     assert just_past_two.tzinfo is None
