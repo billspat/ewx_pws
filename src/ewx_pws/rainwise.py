@@ -17,7 +17,7 @@ class RainwiseConfig(WeatherStationConfig):
         tz             : str = 'ET'
 
 class RainwiseStation(WeatherStation):
-    """ config is RainwiseConfig type """
+    """ WeatherStation subclass for Rainwise API http://api.rainwise.net """
     @classmethod
     def init_from_dict(cls, config:dict):
         """ accept a dictionary to create this class, rather than the Type class"""
@@ -60,6 +60,9 @@ class RainwiseStation(WeatherStation):
         Transforms data into a standardized format and returns it as a WeatherStationReadings object.
         data param if left to default tries for self.response_data processing
         """
+
+        if isinstance(response_data,str):
+            response_data = json.loads(response_data)
 
         # Return an empty list if there is no data contained in the response, this covers error 429
         if 'station_id' not in response_data.keys():

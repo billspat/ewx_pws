@@ -28,6 +28,7 @@ WeatherStation.getreadings returns a complex type that is a list of dictionary (
 
 import pytz, json, warnings, logging
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 # from pytz import timezone
 from requests import Response, Request
 from abc import ABC, abstractmethod
@@ -289,6 +290,9 @@ class WeatherStation(ABC):
         
         return(dt.strftime('%Y-%m-%d %H:%M:%S'))
     
+    #######################
+    #### primary class interfaces
+
     def get_readings(self, start_datetime : datetime = None, end_datetime : datetime = None):
         """prepare start/end times and other params generically and then call station-specific method with that.
         start_datetime: date time in UTC time zone
@@ -378,37 +382,56 @@ class WeatherStation(ABC):
         readings = WeatherStationReadings.from_transformed_readings(transformed_readings, api_data)
         return readings
         
+    ################### station class utilities
 
-    def dt_utc_from_str(self, datetime_str: str, in_tz: timezone = None):
-        # Creates a UTC timezone aware datetime from a string and an optional timezone
-        # If a timezone is passed, UTC is still returned, just adjusted for the input being a different TZ
+    def dt_utc_from_str(self, datetime_str: str)->datetime:
+        """ To enable converting timestamp strings from api responses that 
+            1) are in in station local time
+            2) don't have a timezone info in the string (most don't)
+            use the station's config timezone to convert to a timestamp str
+            to a UTC timezone aware datateime
+        """
+        
         dt = datetime.fromisoformat(datetime_str)
-        if not in_tz:
-            return datetimeUTC(value=pytz.utc.localize(dt))
+        #
         if not is_tz_aware(dt):
-            dt =  pytz.timezone(self.config.pytz()).localize(dt)
-            
-        return dt.astimezone(timezone.utc) # datetimeUTC(value=in_tz.localize(dt).astimezone(pytz.utc))
+            station_timezone_str = self.config._tzlist[self.config.tz]
+            # add station timezone
+            dt = dt.replace(tzinfo = ZoneInfo(station_timezone_str))
+        else:
+            # the string already has a timezone, could be anytimezone
+            # should that be an error condition?
+
+            pass
+
+        return(dt.astimezone(timezone.utc))
 
 
-    def get_readings_local(self, start_datetime_local: datetime, end_datetime_local: datetime, add_to=None):
+    def station_tz(self):
+        """ config class stores tz as 2-char; convert into IANA timezone
+        return zoneinfo.ZoneInfo object for use with astimezone() o replace() fns
+        """
+        return ZoneInfo(self.config._tzlist[self.config.tz])
+
+    def get_readings_local(self, start_datetime_local: datetime, end_datetime_local: datetime):
         """ get reading for the timezone of the station.  This will be problematic for DST readings
-        datetimes with a tz set to one outside of station tz are invalid.  Use UTC with get_reading() method instead
+        datetimes with a tz set to one outside of station tz are invalid.  
+        Use UTC with get_reading() method instead
         e.g. start_datetime_local == 6:00 am, is 6:00am for the tz of the station. """            
     
         def correct_tz(dt):
             """ internal fn to adapt dt sent to local time of station.  """
             if dt.tzinfo is None:
-                return( pytz.timezone(self.config.pytz()).localize(dt) )
+                return(  dt.replace(self.station_tz()) )
             
-            if  dt.tzinfo == pytz.timezone(self.config.pytz()):
+            if  dt.tzinfo == self.station_tz():
                 return(dt)
 
-            raise ValueError(f"time argument timezone does not match station.  Remove timezone or use {self.config.tz}")         
+            raise ValueError(f"time argument timezone does not match station.  Remove timezone or use {self.station_tz()}")         
 
         start_datetime_utc = correct_tz(start_datetime_local).astimezone(timezone.utc)
         end_datetime_utc   = correct_tz(end_datetime_local).astimezone(timezone.utc)
-        return self.get_readings(start_datetime=start_datetime_utc, end_datetime=end_datetime_utc, add_to=add_to)
+        return self.get_readings(start_datetime=start_datetime_utc, end_datetime=end_datetime_utc)
 
         
     def get_test_reading(self):

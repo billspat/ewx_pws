@@ -2,6 +2,8 @@
 
 import pytest
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo, available_timezones
+
 import logging
 # from dotenv import load_dotenv
 # # testing .env
@@ -16,7 +18,8 @@ from ewx_pws.onset import OnsetStation, OnsetConfig
 from ewx_pws.zentra import ZentraStation, ZentraConfig    
 from ewx_pws.ewx_pws import STATION_CLASS_TYPES, WeatherStation
 
-from ewx_pws.weather_stations import WeatherAPIData, WeatherAPIResponse, WeatherStationReading, WeatherStationReadings
+from ewx_pws.weather_stations import WeatherAPIData, WeatherAPIResponse, \
+    WeatherStationReading, WeatherStationReadings, TIMEZONE_CODE
 
 @pytest.fixture
 def station_config_types():
@@ -59,6 +62,12 @@ def test_station_class_fake_config(station_type, fake_station_configs):
     station = StationClass.init_from_dict(fake_station_configs[station_type])
     assert isinstance(station, WeatherStation)
     assert isinstance(station.id, str)
+    # timezone data and info check. 
+    # chose to store timezone as two-char timezone, but zoneinfo doesn't use those codes
+    # so checking the lookup stored in the config object
+    assert station.config.tz in station.config._tzlist.keys()
+    station_zoneinfo = station.config._tzlist[station.config.tz]
+    assert station_zoneinfo in available_timezones()
 
 def test_station_class_instantiation_from_config(station_configs, station_type):
     station = STATION_CLASS_TYPES[station_type].init_from_dict(station_configs[station_type])

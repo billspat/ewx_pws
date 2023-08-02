@@ -2,7 +2,7 @@
 import collections, hashlib, hmac
 import json,pytz, time
 from requests import Session, Request
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from pydantic import Field
 from ewx_pws.weather_stations import WeatherStationConfig, WeatherStationReading, WeatherStationReadings, WeatherStation, STATION_TYPE
@@ -59,11 +59,13 @@ class DavisStation(WeatherStation):
     def _get_readings(self, start_datetime:datetime, end_datetime:datetime):
         """ 
         Builds, sends, and stores raw response from Davis API
-        NOTE: Conversion from datetime to unix timestamp is done before the function, in
+        The Davis stations will only collect data for at most 24 hrs. 
+        If a multi-day request is made, would have to return a list of responses for each daily request
+        So this _always_ returns a list of responses
         """
         tsplits = self.get_intervals(start_datetime=start_datetime, end_datetime=end_datetime)
         
-        self.response_list = []
+        response_list = []
         for tsplit in tsplits:
             start_datetime = tsplit[0]
             end_datetime = tsplit[1]
@@ -82,10 +84,10 @@ class DavisStation(WeatherStation):
                                         'end-timestamp': end_timestamp,
                                         'api-signature': self.apisig}).prepare()
             
-            self.current_response = Session().send(self.current_api_request)
-            self.response_list.append(json.loads(self.current_response.content))
+            response = Session().send(self.current_api_request)
+            response_list.append(response)
 
-        return self.response_list
+        return response_list
 
     def _compute_signature(self, t:int, start_timestamp:int, end_timestamp:int):
         """
@@ -101,27 +103,31 @@ class DavisStation(WeatherStation):
             hashlib.sha256).hexdigest()
         return self.apisig
 
-    def _transform(self, data=None, request_datetime: datetime = None):
+    def _transform(self, response_data):
         """
         Transforms data into a standardized format and returns it as a WeatherStationReadings object.
         data param if left to default tries for self.response_data processing
         """
-        readings_list = WeatherStationReadings()
+        # if we can't decide to load JSON or not
+        if isinstance(response_data,str):
+            response_data = json.loads(response_data)
 
-        if 'sensors' not in data.keys():
-            return readings_list
-        for lsid in data['sensors']:
-            for record in lsid['data']:
+        if 'sensors' not in response_data.keys():
+            return []
+        
+        readings = []
+        for lsid in response_data['sensors']:
+            for record in lsid['data']:    
                 if 'temp_out' in record.keys():
-                    temp = DavisReading(station_id=data['station_id'],
-                                    request_datetime=request_datetime,
-                                    data_datetime=pytz.utc.localize(datetime.utcfromtimestamp(record['ts'])),
-                                    atemp=round((record['ts'] - 32) * 5 / 9, 2),
-                                    pcpn=round(record['rainfall_mm'] * 25.4, 2),
-                                    relh=round(record['hum_out'], 2))
-                    readings_list.readings.append(temp)
+                        reading = {            
+                            'data_datetime': datetime.utcfromtimestamp(record['ts']).astimezone(timezone.utc),
+                            'atemp': round((record['ts'] - 32) * 5 / 9, 2),
+                            'pcpn': round(record['rainfall_mm'] * 25.4, 2),
+                            'relh': round(record['hum_out'], 2)
+                            }
+                        readings.append(reading)
 
-        return readings_list
+        return readings
 
     def _handle_error(self):
         """ place holder to remind that we need to add err handling to each class"""

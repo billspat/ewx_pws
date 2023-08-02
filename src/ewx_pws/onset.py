@@ -1,6 +1,6 @@
 # ONSET ###################
 
-import json
+import json, logging
 from requests import get, post  # Session, Request
 from datetime import datetime, timezone
 
@@ -150,6 +150,7 @@ class OnsetStation(WeatherStation):
 
         # convert to list
         readings = [r for r in readings.values()]
+
         return readings
         
 
