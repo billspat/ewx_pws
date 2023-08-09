@@ -8,7 +8,7 @@ from os import environ
 import sys
 import importlib
 from ewx_pws.ewx_pws import logging
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from zoneinfo import ZoneInfo
 # from tempfile import NamedTemporaryFile
 
@@ -90,10 +90,21 @@ def time_interval(tzstr='US/Eastern'):
     # TODO make this random day/time within 14d of current time
     tz = ZoneInfo(tzstr)
     rn = datetime.now(tz)
-    sdt=datetime(year= rn.year, month = rn.month, day=1, hour=1, minute=0, second=0).astimezone(tz)
-    edt=datetime(year= rn.year, month = rn.month, day=1, hour=1, minute=19, second=0).astimezone(tz)
 
-    return( (sdt,edt) )
+    # randomize time in recent past
+    from random import randrange
+    hour_delta = randrange(23)
+    minute_delta = randrange(59)
+    day_delta = randrange(1)
+    
+    interval_minutes = 30
+    end_datetime = (rn - timedelta(days = day_delta, hours =hour_delta, minutes = minute_delta)).astimezone(tz) #  datetime(year= rn.year, month = rn.month, day=1, hour=1, minute=19, second=0).astimezone(tz)
+    start_datetime = (end_datetime - timedelta(minutes = interval_minutes)).astimezone(tz)
+
+    #sdt=datetime(year= rn.year, month = rn.month, day=1, hour=1, minute=0, second=0).astimezone(tz)
+    #edt=datetime(year= rn.year, month = rn.month, day=1, hour=1, minute=19, second=0).astimezone(tz)
+
+    return( (start_datetime, end_datetime ) )
 
 @pytest.fixture
 def utc_time_interval(time_interval):
