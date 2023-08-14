@@ -97,7 +97,7 @@ def time_interval(tzstr='US/Eastern'):
     minute_delta = randrange(59)
     day_delta = randrange(1)
     
-    interval_minutes = 30
+    interval_minutes = 90
     end_datetime = (rn - timedelta(days = day_delta, hours =hour_delta, minutes = minute_delta)).astimezone(tz) #  datetime(year= rn.year, month = rn.month, day=1, hour=1, minute=19, second=0).astimezone(tz)
     start_datetime = (end_datetime - timedelta(minutes = interval_minutes)).astimezone(tz)
 
