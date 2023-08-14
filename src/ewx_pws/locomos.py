@@ -13,6 +13,17 @@ class LocomosConfig(WeatherStationConfig):
 
 class LocomosStation(WeatherStation):
     """Sub class for  MSU BAE LOCOMOS weather stations used for TOMCAST model"""
+
+    # LOCOMOS variable names are not the same as EWX variable/column names.  
+    # when adding variables, update this list
+    ewx_var_mapping = {
+        # LOCOMOS: EWX
+        'rh':'relh',
+        'temp':'atemp',
+        'prep':'pcpn',
+        # 'lws1':'lws1',  # wait on leaf wetness until dynamic variables in place
+    }
+
     @classmethod
     def init_from_dict(cls, config:dict):
         """ accept a dictionary to create this class, rather than the Type class"""
@@ -24,6 +35,7 @@ class LocomosStation(WeatherStation):
         """ create class from config Type"""
         super().__init__(config)
         self.variables = {}
+        # map LOCOMOS var names to EWX database names
 
     def _check_config(self):
         # TODO implement 
@@ -51,9 +63,10 @@ class LocomosStation(WeatherStation):
             var_response = json.loads(Session().send(var_request).content)
 
             variables = {}   
+
             for result in var_response['results']:
                 variables[result['id']] = result['label']
-            
+                # variables[result['label']] = result['id']
             #TODO add logging
             self.variables = variables
         
@@ -82,8 +95,10 @@ class LocomosStation(WeatherStation):
         }
 
         variables = self._get_variables()
+        
         if isinstance(variables, dict) and len(variables) > 0: 
             variable_ids = list(variables.keys())
+
         else:
             raise RuntimeError(f"LOCOMOS station {self._id} could not get variable list")
 
@@ -92,7 +107,6 @@ class LocomosStation(WeatherStation):
             'device.name', 
             'device.label', 
             'variable.id', 
-            'value.context', 
             'variable.name', 
             'value.value'
             ]
@@ -113,67 +127,84 @@ class LocomosStation(WeatherStation):
 
 
     def _transform(self, response_data=None)->list:
-        """
-        Transforms response text from Zentra API into a standardized format 
-        params:
-            response_data : JSON string from response.text or dict 
-        returns:
-            list of dict for each sensor reading
-        """
-
-        if isinstance(response_data, str):
-            response_data = json.loads(response_data)
-
-        readings_list = [] # WeatherStationReadings()
-
-        #### step 1
-        # re-orient the ubidots output (one list per sensor) to rows of dict  ( one per sensor)
-        # with columnnames 
-        r = response_data['results'] # this contains all the values but no colum names
-        c = response_data['columns'] # these are the column names for corresponding vals
-
-        # strip off device id from columns since we don't need that
+        """ station specific transform
+        params response_data: the value of 'text' from the response object e.g. JSON
+        
+        returns: list of readings keyed on date/teim"""
         def rm_dev_id(colname, delim = "."):
             if(delim in colname):
                 colname = delim.join(colname.split('.')[1:])
-            return(colname)
+            return(colname) 
 
-        # ubidots returns lists of lists 
-        # 'cell' is data record from a single sensor/device
-        # cells is list of all records flattened together,keys on column name
-        cells = []
-        for i in range(0,len(r)): # for i in 1..len(r):
-            cnames = [ rm_dev_id(c) for c in c[i]]
-            for j in range(0, len(r[i])):
-                cells.append(dict(zip(cnames, r[i][j])))
+        import re
+        def variable_id_from_columns(columns):
+            """ some, but not all, column names are prepended with a variable id, 
+            like this: 649ded97c607eb000ea8777d.value.value
+            this finds the first matching colname and extracts the variable id"""
+            pattern_col_with_id =  r"^[0-9a-z]+\.[a-z\.]+$"
+            for colname in columns:
+                if re.match(pattern_col_with_id, colname):
+                    variable_id_for_this_result =  colname.split('.')[0]
+                    return(variable_id_for_this_result)
 
-        #### step 2
-        # convert cells (single sensor value ) to rows (values for all sensors)
-        # rows are keyed on timestamp the reading was taken
-        rows = {}
-        for cell in cells:
-            # build up row keys as we 
-            if cell['timestamp'] not in rows.keys():
-                rows[cell['timestamp']] = {'timestamp': cell['timestamp']}
+        if isinstance(response_data,str):
+            response_data = json.loads(response_data)
 
-            key = cell['variable.name']
-            value = cell['value.value']
-            rows[cell['timestamp']][key] =  value
+        results = response_data['results']
+        columns = response_data['columns']
 
-        #### step 3
-        # convert each row to format used by ewx
-        readings = []
-        for row in rows.values():
-            reading = {
-                # TODO add leaf wetness here and in data model
-                'data_datetime':datetime.fromtimestamp(row['timestamp'] / 1000).astimezone(timezone.utc),
-                'atemp':row['Temperature (C)'],
-                'pcpn':round(row['Precipitation (in)'] * 25.4, 2),
-                'relh':row['Humidity (%)']
-            }
-            readings.append(reading)
+        # maybe switch how we create this
+        # make a mapping of the Variable ID code (in the data/column names) with the EWX variables we
+        # var_by_id = dict([(var_id,var_name) for var_name,var_id in self._get_variables().items() ] )
 
-        return readings
+        var_by_id = dict( [(var_id,self.ewx_var_mapping[var_name]) for var_id,var_name in self._get_variables().items() if var_name in self.ewx_var_mapping.keys() ] ) 
+        
+        # readings dict, keyed on timestamp
+        readings = {}
+
+        # print(var_dict)
+        for j in range(1, len(columns)):
+            # is there data? 
+            if len(results[j]) == 0:
+                continue
+
+            var_id = variable_id_from_columns(columns[j])
+            # is this var one we want? 
+            if var_id not in var_by_id.keys():
+                continue
+            else:
+                var_name = var_by_id[var_id]
+                print(var_name)
+                
+            # results are a list inside list element, one item for each reading/time interval
+            # and just one sensor per result
+            for result in results[j]:
+
+
+                # result is list of one reading (timestamp) for one variable, but does not have varnames 
+                # add the var/column names to make it easy
+                simple_var_names = [ rm_dev_id(c) for c in columns[j]]
+                result_dict = dict(zip(simple_var_names,result ))
+                
+                if result_dict['variable.id'] != var_id:
+                    raise ValueError(f"named variable.id not the same as var_id: {var_id} != {result_dict['variable.id']}")
+                
+                # add this sensor result / value to the readings list
+                # to accumlate the sensors from different readings into single diction, 
+                # key it on timestamp, and build up the dict as sensor values come in. 
+                # first insert a new readings dict if that timestamp is not yet present, start with data_datetime
+                if result_dict['timestamp'] not in readings.keys():
+                    data_datetime = datetime.fromtimestamp(result_dict['timestamp']/ 1000).astimezone(timezone.utc)
+                    readings[result_dict['timestamp']] =  {'data_datetime': data_datetime}
+                
+                # add sensor reading to reading dict for this timestamp
+                readings[result_dict['timestamp']][var_name] = result_dict['value.value']
+                # end result _should_ be readings[per_timestamp] = {'temp':999, 'rh':999, 'lws1':999}
+
+
+        # readings expected to be a list, not a dict as we've used here to accumulate sensors
+        return(list(readings.values()))    
+
 
     def _handle_error(self):
         """ place holder to remind that we need to add err handling to each class"""
