@@ -4,6 +4,14 @@ from datetime import datetime, timezone
 
 from ewx_pws.weather_stations import WeatherStationConfig, WeatherStationReading, WeatherStation, STATION_TYPE
 
+## CONSTANT
+# LOCOMOS stations output leaf wetness in average millivolts.  
+# The UBIDOTS/api calculates an hourly value of count/wet per hour, using the threshold constant below
+# API readings only ouptut mVolts so we need to convert to wet yes/no coded as 1/0 here so it can be averaged per hour.  
+# two readings per hour
+# (0,0), (1,0) or (0,1) or (1,1).   sum(readings)/2.0 = percent wet (0, .5 or 1.0)
+
+LOCOMOS_LWS_THRESHOLD = 460
 class LocomosConfig(WeatherStationConfig):
         station_id     : str
         station_type   : STATION_TYPE = 'LOCOMOS'
@@ -21,7 +29,7 @@ class LocomosStation(WeatherStation):
         'rh':'relh',
         'temp':'atemp',
         'prep':'pcpn',
-        # 'lws1':'lws1',  # wait on leaf wetness until dynamic variables in place
+        'lws1':'lws0',   # this is not percent wet, but wet y/n -> 0/1
     }
 
     @classmethod
@@ -35,6 +43,9 @@ class LocomosStation(WeatherStation):
         """ create class from config Type"""
         super().__init__(config)
         self.variables = {}
+
+        # this constant is set as a object variable so that it may be overridden per station if necessary
+        self.lws_threshold = LOCOMOS_LWS_THRESHOLD
         # map LOCOMOS var names to EWX database names
 
     def _check_config(self):
@@ -126,6 +137,15 @@ class LocomosStation(WeatherStation):
         return(response)
 
 
+    def _lws_convert(self, lws_value:float)->int:
+        """ convert leaf wetness value to EWX standard wet/not wet.
+        params lws_value : mVolt value as storedd in the API
+        output : integer 0 or 1
+        """
+        # this is here mostly to be explicit and document where this conversion happens
+        return 1.0 if lws_value > self.lws_threshold else 0.0
+
+
     def _transform(self, response_data=None)->list:
         """ station specific transform
         params response_data: the value of 'text' from the response object e.g. JSON
@@ -198,7 +218,11 @@ class LocomosStation(WeatherStation):
                     readings[result_dict['timestamp']] =  {'data_datetime': data_datetime}
                 
                 # add sensor reading to reading dict for this timestamp
-                readings[result_dict['timestamp']][var_name] = result_dict['value.value']
+                if var_name == "lws0":
+                    readings[result_dict['timestamp']][var_name] = self._lws_convert(result_dict['value.value'])
+                else:
+                    readings[result_dict['timestamp']][var_name] = result_dict['value.value']
+                
                 # end result _should_ be readings[per_timestamp] = {'temp':999, 'rh':999, 'lws1':999}
 
 

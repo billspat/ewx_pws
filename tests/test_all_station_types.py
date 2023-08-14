@@ -114,3 +114,5 @@ def test_station_readings(test_station, utc_time_interval):
         assert isinstance(weather_station_reading.atemp, float)
         assert isinstance(weather_station_reading.pcpn, float)
         assert isinstance(weather_station_reading.relh, float)
+        if test_station.config.station_type == "LOCOMOS":
+            assert isinstance(weather_station_reading.lws0, float)
