@@ -142,9 +142,10 @@ class WeatherStationReading(BaseModel):
     # e.g. atemp_src = "API" or similar
 
     data_datetime : datetime    
-    atemp : float or None       # celsius 
-    pcpn : float or None        # mm, > 0
-    relh : float or None        # percent
+    atemp : float or None = None      # celsius 
+    pcpn  : float or None = None        # mm, > 0
+    relh  : float or None = None       # percent
+    lws0  : float or None = None       # this is an nominal reading or 0 or 1 (wet / not wet)
 
     @validator('request_datetime', 'data_datetime',allow_reuse=True)
     def check_datetime_utc(cls, field):
