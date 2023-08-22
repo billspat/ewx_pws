@@ -36,6 +36,10 @@ class OnsetConfig(WeatherStationConfig):
 
 
 class OnsetStation(WeatherStation):
+
+    # time between readings in minutes for this station type
+    interval_min = 5
+
     """ config is OnsetConfig type """
     @classmethod
     def init_from_dict(cls, config:dict):
@@ -126,7 +130,7 @@ class OnsetStation(WeatherStation):
         atemp_key = sensor_sns['atemp']
         pcpn_key = sensor_sns['pcpn']
         relh_key = sensor_sns['relh']
-        station_sn = response_data["observation_list"][0]["logger_sn"]
+        # station_sn = response_data["observation_list"][0]["logger_sn"]
 
         # Gathering each reading into an easily formattable manner
         for reading in response_data["observation_list"]:

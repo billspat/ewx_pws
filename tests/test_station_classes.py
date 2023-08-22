@@ -12,6 +12,9 @@ def generic_station_config():
 @pytest.fixture
 def fake_station_class():
     class FakeStation( WeatherStation):
+        
+        interval_min = 15 
+
         def __init__(self, config):
             super().__init__(config)
         def _check_config(self)->bool:

@@ -60,10 +60,12 @@ TIMEZONE_CODE_LIST = {
             'ET': 'US/Eastern'
         }
 
+
 class WeatherStationConfig(BaseModel):
     """Base station configuration, includes common meta-data config common to all station types.  Must include a valid US Timezone 
     Station-specifc config.  """
     station_id : str 
+    install_date: datetime # the date the station started collecting data in it's location
     station_type : STATION_TYPE = "GENERIC"
     tz : TIMEZONE_CODE = Field(default='ET', description="US two-character time zone of the station location ( 'HT','AT','PT','MT','CT','ET')") 
     _tzlist: dict[str:str] = {
@@ -85,7 +87,6 @@ class WeatherStationConfig(BaseModel):
         """ allow private member for timezone conversion"""
         underscore_attrs_are_private = True
 
-# ws = WeatherStationConfig.parse_obj( {'station_id' : 'fakestation', 'station_type' : "GENERIC", 'tz' : "ET" })
 class GenericConfig(WeatherStationConfig):
     """This configuration is used for testing, dev and for base class.  Station specific config is simply stored
     in a dictionary"""
@@ -193,6 +194,12 @@ class WeatherStation(ABC):
     # used by subclasses as default when there is no data from station
     empty_response = ['{}']
     
+    @property
+    @abstractmethod
+    def interval_min(self):
+        """interval between weather readings in minutes.   Hourly frequency is interval_min/60 """
+        pass
+
     ####### constructor #########
     def __init__(self, config:GenericConfig):
         """create station object using Config data model """    

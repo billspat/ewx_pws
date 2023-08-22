@@ -22,6 +22,10 @@ class LocomosConfig(WeatherStationConfig):
 class LocomosStation(WeatherStation):
     """Sub class for  MSU BAE LOCOMOS weather stations used for TOMCAST model"""
 
+    # time between readings in minutes for this station type
+    interval_min = 30
+
+
     # LOCOMOS variable names are not the same as EWX variable/column names.  
     # when adding variables, update this list
     ewx_var_mapping = {

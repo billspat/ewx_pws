@@ -10,38 +10,20 @@ import logging
 # load_dotenv('tests/.env')
 import json
 
-from ewx_pws.davis import DavisStation, DavisConfig
-from ewx_pws.locomos import LocomosConfig
-from ewx_pws.rainwise import RainwiseStation, RainwiseConfig
-from ewx_pws.spectrum import SpectrumStation, SpectrumConfig
-from ewx_pws.onset import OnsetStation, OnsetConfig
-from ewx_pws.zentra import ZentraStation, ZentraConfig    
-from ewx_pws.ewx_pws import STATION_CLASS_TYPES, WeatherStation
+from ewx_pws import ewx_pws
 
-from ewx_pws.weather_stations import WeatherAPIData, WeatherAPIResponse, \
+from ewx_pws.weather_stations import WeatherStation, WeatherAPIData, WeatherAPIResponse, \
     WeatherStationReading, WeatherStationReadings, TIMEZONE_CODE
 
 @pytest.fixture
-def station_config_types():
-    """ manually construct our list of station types to test"""
-    station_config_types = {}
-    station_config_types['DAVIS'] = DavisConfig
-    station_config_types['LOCOMOS'] = LocomosConfig
-    station_config_types['RAINWISE'] = RainwiseConfig
-    station_config_types['SPECTRUM'] = SpectrumConfig
-    station_config_types['ONSET'] = OnsetConfig
-    station_config_types['ZENTRA'] = ZentraConfig 
-    yield station_config_types 
-
-
-@pytest.fixture
 def test_station(station_type, station_configs):
-    station = STATION_CLASS_TYPES[station_type].init_from_dict(station_configs[station_type])
+    #### TODO
+    #### the station csv file has multiple stations in it, so 
+    station = [station_type].init_from_dict(station_configs)
     return(station)
   
 
-
-def test_station_config(station_type, fake_station_configs,  station_config_types):
+def test_station_config(station_type, fake_station_configs):
     """ simple test that a station config type can be instantiated from example data
     params
     station_type : string of the type of station
@@ -49,37 +31,53 @@ def test_station_config(station_type, fake_station_configs,  station_config_type
     station_config_types: dictionary of config classes keyed on station type
     """
     
-    StationConfigType = station_config_types[station_type]
-    c = StationConfigType.parse_obj(fake_station_configs[station_type])
-    # will this work? 
-    assert isinstance(c, StationConfigType)
+    assert station_type in ewx_pws.CONFIG_CLASS_TYPES
+    StationConfigType = ewx_pws.CONFIG_CLASS_TYPES[station_type]
 
-def test_station_class_fake_config(station_type, fake_station_configs):
+    # The code is retrieving the available station configurations of a specific station type from the
+    # `fake_station_configs` dictionary. It then iterates over each configuration and performs some
+    # operations on it.
+    available_configs = ewx_pws.configs_of_type(fake_station_configs, station_type)
+    for config in available_configs:
+        c = StationConfigType.parse_obj(config)
+        # will this work? 
+        assert isinstance(c, StationConfigType)
 
-    # STATION_CLASS_TYPES imported from ewx main 
-    StationClass = STATION_CLASS_TYPES[station_type]
+def test_station_class_with_fake_config(station_type, fake_station_configs):
 
-    station = StationClass.init_from_dict(fake_station_configs[station_type])
-    assert isinstance(station, WeatherStation)
-    assert isinstance(station.id, str)
-    # timezone data and info check. 
-    # chose to store timezone as two-char timezone, but zoneinfo doesn't use those codes
-    # so checking the lookup stored in the config object
-    assert station.config.tz in station.config._tzlist.keys()
-    station_zoneinfo = station.config._tzlist[station.config.tz]
-    assert station_zoneinfo in available_timezones()
+    assert station_type in ewx_pws.CONFIG_CLASS_TYPES
+    StationClass = ewx_pws.STATION_CLASS_TYPES[station_type]
 
-def test_station_class_instantiation_from_config(station_configs, station_type):
-    station = STATION_CLASS_TYPES[station_type].init_from_dict(station_configs[station_type])
-    assert isinstance(station, WeatherStation)
-    assert isinstance(station.id, str)
+    available_configs = ewx_pws.configs_of_type(fake_station_configs, station_type)
+    for config in available_configs:
+        station = StationClass.init_from_dict(config)
+        assert isinstance(station, WeatherStation)
+        assert isinstance(station.id, str)
+        # timezone data and info check. 
+        # chose to store timezone as two-char timezone, but zoneinfo doesn't use those codes
+        # so checking the lookup stored in the config object
+        assert station.config.tz in station.config._tzlist.keys()
+        station_zoneinfo = station.config._tzlist[station.config.tz]
+        assert station_zoneinfo in available_timezones()
 
+        assert isinstance(station.interval_min, int)
+        assert station.interval_min in [5,15,30]
+           
+def test_station_readings(station_config, utc_time_interval):
+    """ run one for each row in the config file sent"""
+    station_type = station_config['station_type']
+    logging.debug(f"testing type {station_type}")
 
-def test_station_readings(test_station, utc_time_interval):
+    assert station_type in ewx_pws.STATION_TYPE_LIST
+    StationClass =  ewx_pws.STATION_CLASS_TYPES[station_type]
     
+    # from ewx_pws.zentra import ZentraStation
+    # StationClass = ZentraStation
+    
+    test_station = StationClass.init_from_dict(config = station_config)
     # first just check that our test station has a non-zero length station_type and is one on the list
     assert len(test_station.config.station_type) > 0 
-    assert test_station.config.station_type in STATION_CLASS_TYPES
+    assert test_station.config.station_type == station_type 
 
     sdt,edt = utc_time_interval
 
@@ -97,9 +95,11 @@ def test_station_readings(test_station, utc_time_interval):
     assert isinstance(test_station.current_response_data, WeatherAPIData) 
     assert isinstance(weather_api_data.station_type, str)
     assert weather_api_data.station_type == test_station.config.station_type
-    print(weather_api_data.station_type)
+
     
     ###### TRANSFORM TESTS
+    # these are included in this test becuase of the Zentra timeout problem
+
     weather_station_readings = test_station.transform(weather_api_data)
 
     assert isinstance(weather_station_readings, WeatherStationReadings)

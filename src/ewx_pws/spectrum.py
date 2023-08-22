@@ -14,6 +14,11 @@ class SpectrumConfig(WeatherStationConfig):
         tz             : str = 'ET' #  The time zone.  Defaults to Eastern Time.
 
 class SpectrumStation(WeatherStation):
+
+    # time between readings in minutes for this station type
+    interval_min = 5
+
+
     @classmethod
     def init_from_dict(cls, config:dict):
         """ accept a dictionary to create this class, rather than the Type class"""

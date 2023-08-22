@@ -18,6 +18,10 @@ class RainwiseConfig(WeatherStationConfig):
 
 class RainwiseStation(WeatherStation):
     """ WeatherStation subclass for Rainwise API http://api.rainwise.net """
+
+    # time between readings in minutes for this station type
+    interval_min = 15
+
     @classmethod
     def init_from_dict(cls, config:dict):
         """ accept a dictionary to create this class, rather than the Type class"""
