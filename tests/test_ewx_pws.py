@@ -95,23 +95,21 @@ def test_can_instantiate_stations_from_fake_file(fake_station_config_file):
         station = stations[station_id]
         assert type(station) in list(ewx_pws.STATION_CLASS_TYPES.values())
 
-# @pytest.mark.filterwarnings("ignore:emptycsv")
-# def test_will_error_with_file_blank(fake_blank_file):
-
-#     stations = ewx_pws.station_dict_from_file(fake_blank_file)    
-#     assert stations == {}
-
-#     stations = ewx_pws.stations_from_file(fake_blank_file)
-#     assert stations == []
+@pytest.mark.filterwarnings("ignore:emptycsv")
+def test_will_error_with_file_blank(fake_blank_file):
+     with pytest.raises(Exception) as e_info:
+        stations = ewx_pws.station_dict_from_file(fake_blank_file)    
+        # assert stations == {}
 
 
-# def test_stations_from_file_invalid(fake_invalid_file):
-#     with pytest.raises(ValueError):
-#         ewx_pws.stations_from_file(fake_invalid_file)
 
-# def test_stations_from_file_noncsv(fake_noncsv_file):
-#     with pytest.raises(TypeError):
-#         ewx_pws.stations_from_file(fake_noncsv_file)
+def test_stations_from_file_invalid(fake_invalid_file):
+    with pytest.raises(ValueError):
+        ewx_pws.stations_from_file(fake_invalid_file)
+
+def test_stations_from_file_noncsv(fake_noncsv_file):
+    with pytest.raises(Exception):
+        ewx_pws.stations_from_file(fake_noncsv_file)
 
 ######################
 ### valid csv file test (sent via parameter)

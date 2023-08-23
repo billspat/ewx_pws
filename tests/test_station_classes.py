@@ -3,11 +3,6 @@ from pydantic import ValidationError
 import requests
 import pytest, json, pytz, datetime
 
-@pytest.fixture
-def generic_station_config():
-    """ example config dictionary for generic station, note no sn, password or other info like other stations"""
-    return( {'station_id' : 'fakestation', 'station_type' : "GENERIC", 'tz' : "ET" })
-
 
 @pytest.fixture
 def fake_station_class():
