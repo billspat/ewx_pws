@@ -8,12 +8,10 @@ from pydantic import Field
 from ewx_pws.weather_stations import WeatherStationConfig, WeatherStationReading, WeatherStationReadings, WeatherStation, STATION_TYPE
 
 class DavisConfig(WeatherStationConfig):
-        station_id     : str
         station_type   : STATION_TYPE = 'DAVIS'
         sn             : str #  The serial number of the device.
         apikey         : str # The user's API access key. 
         apisec         : str # API security that is used to compute the hash.
-        tz             : str = 'US/Eastern' #  The time zone.  Defaults to Eastern Time.
 
 class DavisStation(WeatherStation):
 

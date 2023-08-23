@@ -13,11 +13,10 @@ from ewx_pws.weather_stations import WeatherStationConfig, WeatherStationReading
 
 LOCOMOS_LWS_THRESHOLD = 460
 class LocomosConfig(WeatherStationConfig):
-        station_id     : str
         station_type   : STATION_TYPE = 'LOCOMOS'
         token          : str # Device token
         id             : str # ID field on device webpage
-        tz             : str
+
 
 class LocomosStation(WeatherStation):
     """Sub class for  MSU BAE LOCOMOS weather stations used for TOMCAST model"""

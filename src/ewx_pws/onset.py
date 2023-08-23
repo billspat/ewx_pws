@@ -21,7 +21,6 @@ from ewx_pws.weather_stations import WeatherStationConfig, WeatherStationReading
 # "message":"OK: Found: 21 results."
 
 class OnsetConfig(WeatherStationConfig):
-    station_id : str
     station_type : STATION_TYPE  = 'ONSET'
     sn : str  = Field(description="The serial number of the device")
     client_id : str = Field(description="client specific value provided by Onset")
@@ -29,11 +28,6 @@ class OnsetConfig(WeatherStationConfig):
     ret_form : str = Field(description="The format data should be returned in. Currently only JSON is supported.")
     user_id : str = Field(description="alphanumeric ID of the user account This can be pulled from the HOBOlink URL: www.hobolink.com/users/<user_id>")
     sensor_sn : dict[str,str] = Field(description="a dict of sensor alphanumeric serial numbers keyed on sensor type, e.g. {'atemp':'21079936-1'}") 
-    
-    # access_token : str = Field('', description="needed for api auth, filled in by auth request ")
-    
-    # TODO class OnsetSensor() of elements in sensor_sn
-
 
 class OnsetStation(WeatherStation):
 

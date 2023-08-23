@@ -7,14 +7,12 @@ from datetime import datetime, timezone
 from ewx_pws.weather_stations import WeatherStationConfig, WeatherStationReading, WeatherStationReadings, WeatherStation, STATION_TYPE
 
 class RainwiseConfig(WeatherStationConfig):
-        station_id     : str
         station_type   : STATION_TYPE = 'RAINWISE'
         username       : str = None
         sid            : str # Site id, assigned by Rainwise.
         pid            : str # Password id, assigned by Rainwise.
         mac            : str # MAC of the weather station. Must be in the group assigned to username.
         ret_form       : str # Values xml or json; returns the data as JSON or XML.
-        tz             : str = 'ET'
 
 class RainwiseStation(WeatherStation):
     """ WeatherStation subclass for Rainwise API http://api.rainwise.net """

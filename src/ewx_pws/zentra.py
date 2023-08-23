@@ -9,11 +9,9 @@ import pytz # instead of zone info to be able to use current config timezone cod
 from ewx_pws.weather_stations import WeatherStationConfig, WeatherStation, STATION_TYPE
 
 class ZentraConfig(WeatherStationConfig):
-        station_id     : str
         station_type   : STATION_TYPE = 'ZENTRA'
         sn             : str #  The serial number of the device.
         token          : str # The user's access token.
-        tz             : str
 
 class ZentraStation(WeatherStation):
 

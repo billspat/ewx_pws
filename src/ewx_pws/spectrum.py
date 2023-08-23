@@ -7,11 +7,9 @@ from pydantic import Field
 from ewx_pws.weather_stations import WeatherStationConfig, WeatherStationReading, WeatherStationReadings, WeatherStation, STATION_TYPE
 
 class SpectrumConfig(WeatherStationConfig):
-        station_id     : str
         station_type   : STATION_TYPE = 'SPECTRUM'
         sn             : str #  The station identifier. 
         apikey         : str #  The user's API access key.  
-        tz             : str = 'ET' #  The time zone.  Defaults to Eastern Time.
 
 class SpectrumStation(WeatherStation):
 
