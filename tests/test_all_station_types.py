@@ -1,14 +1,8 @@
 """test_all_station_types.py common set of tests to apply to all types of stations"""
 
-import pytest
+import pytest, logging, json
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo, available_timezones
-
-import logging
-# from dotenv import load_dotenv
-# # testing .env
-# load_dotenv('tests/.env')
-import json
 
 from ewx_pws import ewx_pws
 

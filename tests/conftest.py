@@ -21,17 +21,6 @@ if 'GENERIC' in STATION_TYPE_LIST:
     STATION_TYPE_LIST.remove('GENERIC')
 
 ###########################
-## CONFIG FROM ENVIRONMENT
-
-###################### TODO remove this! 
-
-# from dotenv import load_dotenv
-# # project wide .env
-# load_dotenv()
-# # testing .env
-# load_dotenv('tests/.env')
-
-###########################
 ## CONFIG FROM PYTEST COMMAND LINE ARG(S)
 def pytest_addoption(parser):
 
@@ -50,8 +39,6 @@ def pytest_addoption(parser):
         default="test_stations.csv",
         help="the path to a CSV file with station configs, Default file is 'test_stations.csv' in this folder"
     )
-
-
 
 ###########################
 ## PYTEST ITERATE THROUGH ALL STATION TYPES FROM CONFIG
@@ -201,25 +188,6 @@ def station_configs(station_file):
         
     return configs
 
-# @pytest.fixture
-# def station_configs(station_configs):
-#     """using the env entries data above, reform into dictionaries of config"""
-#     # add generic to .env station_configs = [{'id':'TEST_GENERIC', 'station_type': 'generic', 'config': '{"tz":"ET"}'}]
-#     # the env are dict as json str , the method above converts to dict, with 'config' sub-dict
-#     # move 'config' sub-dict up a level for Config models
-#     configs = {}
-#     for station_type in station_configs:
-#         s_config = station_configs[station_type]
-#         # move all fields in sub-dict to top level so we can create a config object
-#         s_config.update(s_config['config'])
-#         # remove 'config' element no longer needed for specific config
-#         s_config['config'] = None
-#         # add to our dict of all configs
-#         configs[station_type]  = s_config 
-    
-#     yield configs
-
-
 ###########################
 ## LIST OF STATION SUBCLASSES to work with when iterating on type
 
@@ -248,46 +216,3 @@ def station_configs(station_file):
 
    
 
-# obsolete - see above. 
-# @pytest.fixture(scope="session")
-# def fake_station_configs(fake_stations_list):
-#     """using the fake data above, reform into dictionaries of config
-#     return: dict of fake configs, only one entry per station type"""
-    
-#     # TODO: make the env file JSON dictionary keys match the config dictionary keys. 
-#     # THIS ASSUMES KEYS ARE IN A SPECIFIC ORDER AND DOES NOT PULL BY NAME.   
-#     fake_configs = {}
-#     for fs in fake_stations_list:
-#         fake_config = json.loads(fs[2])
-#         station_type = fs[1]
-#         station_id = fs[0]
-#         install_date = datetime(2023,5,1)
-
-#         fake_config.update({'station_id': station_id, 'station_type': station_type, 'install_date':install_date})
-#         fake_configs[station_type] = fake_config
-    
-#     return fake_configs
-
-# @pytest.fixture
-# def station_configs_from_env():
-#     """build a dictionary of station config from os environemt, each in generic config format. 
-#     Uses the global constant STATION_TYPE_LIST from weather_stations.py 
-#     This fixture is deprecated in favor of reading from a CSV file of stations as this only tests one station per type"""
-
-#     stations_available  = [s for s in STATION_TYPE_LIST if s.upper() in  environ.keys()]
-#     station_configs = {}
-#     for station_name in stations_available:
-
-#         station_config =  json.loads(environ[station_name])
-#         # station_config.update(station_config['config'])
-#         station_config["station_id"] =  f"test_{station_name}"
-#         station_config["station_type"] = station_name
-#         station_config["install_date"] = datetime.fromisoformat(station_config["install_date"])
-#         station_configs[station_name] = station_config
-#         # {
-#         #     "station_id"     : f"test_{station_name}",
-#         #     "station_type"   : station_name,
-#         #     "config" : json.loads(environ[station_name])
-#         # }
-        
-#     return station_configs

@@ -56,23 +56,6 @@ def get_readings(stations:list,
      
     return(readings)
 
-    
-def stations_from_env():
-    """ this is a temporary cludge to convert the old style dot env into new listing"""
-    
-    stations_available  = [s for s in STATION_TYPE_LIST if s.upper() in os.environ.keys()]
-    
-    stations = {}
-    for station_name in stations_available:
-        station_config = json.loads(os.environ[station_name])
-        station_config["station_id"] = f"{station_name}_1"
-        station_config["station_name"] =  station_name
-        station_config["install_date"] = datetime.fromisoformat(station_config['install_date'])
-
-        stations[station_name] = weather_station_factory(station_config)
-
-    # most code is expecting a list, but change to use a dict
-    return list(stations.values())
 
 def read_station_configs(csv_file_path:str)->dict:
     """read CSV in standard station config format, and flatten into dict useable by station configs. 

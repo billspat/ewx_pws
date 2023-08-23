@@ -79,7 +79,7 @@ Note this project may switch to a different build system in the future.
 
 Write and run tests continually
 
-Note: some tests require a configuration file of station API log-in secrets.  Create the file .env based on project documentation.   Without the file some tests will fail but you can still run 
+Note: some tests require a configuration file of station API log-in secrets.  Create a CSV file of station configurations based on project documentation.   Without the file some tests will fail but you can still run 
 
 From the top directory, run
 

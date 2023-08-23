@@ -5,6 +5,7 @@ import re
 
 # this is a placeholder , add type-specific test if ever needed
 def test_station(station_configs):
+    
     station = OnsetStation.init_from_dict(station_configs['ONSET'])
     assert isinstance(station, WeatherStation)
     assert station.config.station_type == 'ONSET'
