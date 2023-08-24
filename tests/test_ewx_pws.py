@@ -154,7 +154,7 @@ def test_can_instantiate_station_config_file(station_file):
         assert type(station) in list(ewx_pws.STATION_CLASS_TYPES.values())
 
 def test_filter_by_station_type(station_file):
-    logging.debug("this test ignored the stationtype parameter")
+    logging.debug("this test ignored the station_type parameter")
     stations = ewx_pws.station_dict_from_file(station_file)
     for station_type in ewx_pws.STATION_TYPE_LIST:
         station_subset = ewx_pws.stations_of_type(stations = stations, station_type = station_type)

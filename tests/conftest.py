@@ -26,7 +26,7 @@ def pytest_addoption(parser):
 
     # single station type
     parser.addoption(
-        "--stationtype",
+        "--station_type",
         action="store",
         default=None,
         help=f"optional single station type to test. default is all known types {STATION_TYPE_LIST}",
@@ -56,10 +56,10 @@ def pytest_generate_tests(metafunc):
     station_configs = list(station_config_dict.values())
 
 
-    stationtype_option = metafunc.config.getoption("stationtype")
-    if stationtype_option is not None:
-            stationtype_option = stationtype_option.upper()
-            station_configs = configs_of_type(station_configs = station_configs, station_type = stationtype_option)
+    station_type_option = metafunc.config.getoption("station_type")
+    if station_type_option is not None:
+            station_type_option = station_type_option.upper()
+            station_configs = configs_of_type(station_configs = station_configs, station_type = station_type_option)
             
     station_types_in_config_file = station_types_present(station_configs)
 
@@ -67,13 +67,13 @@ def pytest_generate_tests(metafunc):
     # for those tests that require a station_type .. use code to inject the option or check for param and also for config
     # this currently restricts to those types present in the config BUT some test uses fake config and those would be skipped :{}
     if "station_type" in metafunc.fixturenames:
-        if stationtype_option is not None:
-            if not stationtype_option in station_types_in_config_file:
+        if station_type_option is not None:
+            if not station_type_option in station_types_in_config_file:
                 # station type on command line invalid, abort testing?  or just skip this test...
-                 pytest.skip(f"no config available station type {stationtype_option} in configuration file {station_file_option}")
+                 pytest.skip(f"no config available station type {station_type_option} in configuration file {station_file_option}")
             else:
 
-                types_to_test = [stationtype_option]      
+                types_to_test = [station_type_option]      
             
                 # TODO more elegant way to bug out
             
