@@ -158,16 +158,14 @@ def station_types_present(station_configs:dict)->list[str]:
     station_types = list(set([station_config['station_type'] for station_config in station_configs]))
     return(station_types)
 
-
-def configs_of_type(station_configs:dict, station_type)->list:
+# TODO this  should return a dict keyed on station id rather than strip that off
+def configs_of_type(station_configs:dict, station_type:STATION_TYPE)->list:
     """given a station type, return all the stations of that type"""
     
     # allow list OR dict by converting to list if a dict is sent
     if isinstance(station_configs, dict): station_configs = station_configs.values() 
 
-    s = list(
-        filter(lambda c: station_type == c['station_type'],  station_configs)
-        )
+    s = list(filter(lambda c: station_type == c['station_type'],  station_configs))
 
     # for station_config in station_configs.values():
     #     if station_type == station_config['station_type']:
@@ -176,7 +174,7 @@ def configs_of_type(station_configs:dict, station_type)->list:
     return(s)
 
 
-def stations_of_type(stations, station_type)->list:
+def stations_of_type(stations, station_type:STATION_TYPE)->list:
     """from a dictionary of station objects, filter out for one type of station"""
     # allow list OR dict by converting to list if a dict is sent
     if isinstance(stations, dict): stations = stations.values() 

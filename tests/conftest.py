@@ -7,7 +7,7 @@ import pytest, random, string, json
 from os import environ, path, remove
 import sys
 import importlib
-from ewx_pws.ewx_pws import logging, read_station_configs, station_types_present
+from ewx_pws.ewx_pws import logging, read_station_configs, station_types_present, configs_of_type, stations_of_type
 from datetime import datetime, timezone, timedelta
 from zoneinfo import ZoneInfo
 # from tempfile import NamedTemporaryFile
@@ -49,45 +49,49 @@ def pytest_generate_tests(metafunc):
     # This is called for every test. Only get/set command line arguments
     # if the argument is specified in the list of test "fixturenames".
 
-    
-    ##### STATION CONFIGS ie STATIONS
+
     station_file_option = metafunc.config.getoption("station_file")
-
-    # the the id-keyed dictionary of station configs, but use the list of configs only as we don't care about the ID here
     station_config_dict = read_station_configs(station_file_option)
+    # the the id-keyed dictionary of station configs, but use the list of configs only as we don't care about the ID here
     station_configs = list(station_config_dict.values())
-    
 
-    if "station_config" in metafunc.fixturenames:    
-        metafunc.parametrize('station_config', station_configs)
 
+    stationtype_option = metafunc.config.getoption("stationtype")
+    if stationtype_option is not None:
+            stationtype_option = stationtype_option.upper()
+            station_configs = configs_of_type(station_configs = station_configs, station_type = stationtype_option)
+            
+    station_types_in_config_file = station_types_present(station_configs)
 
     ##### STATION TYPES
     # for those tests that require a station_type .. use code to inject the option or check for param and also for config
-    stationtype_option = metafunc.config.getoption("stationtype")
-    station_types_configured = station_types_present(station_configs)
-
+    # this currently restricts to those types present in the config BUT some test uses fake config and those would be skipped :{}
     if "station_type" in metafunc.fixturenames:
         if stationtype_option is not None:
-            stationtype_option = stationtype_option.upper()
-            if not stationtype_option in station_types_configured:
+            if not stationtype_option in station_types_in_config_file:
                 # station type on command line invalid, abort testing?  or just skip this test...
                  pytest.skip(f"no config available station type {stationtype_option} in configuration file {station_file_option}")
             else:
-                logging.debug(f"testing station type {stationtype_option}")
+
                 types_to_test = [stationtype_option]      
             
-            # metafunc.parametrize('vendor', [vendor_option.upper()])
-            # TODO more elegant way to bug out
+                # TODO more elegant way to bug out
             
         else:
-            logging.debug(f" the following types are present in config file {station_types_configured}")
-            types_to_test = station_types_configured
+            logging.debug(f" the following types are present in config file {station_types_in_config_file}")
+            types_to_test = station_types_in_config_file
 
-        # TODO check against the fixture that loads config from disk
-        # for now just assume they are all available
-
+        # test either 1) the types present in the config file, or 2) the type sent as cli param
         metafunc.parametrize('station_type', types_to_test)
+
+
+    ##### STATION CONFIGS ie STATIONS
+    #if a station_type was sent, filter only those configs that match the station type
+
+    # repeat tests for each line in the config file
+    if "station_config" in metafunc.fixturenames:    
+        metafunc.parametrize('station_config', station_configs)
+
 
 
 ###########################
