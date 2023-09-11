@@ -1,8 +1,10 @@
 # RAINWISE ###################
 
-import json, pytz
-from requests import get, Session, Request
+import json
+from requests import get
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo  
+
 
 from ewx_pws.weather_stations import WeatherStationConfig, WeatherStationReading, WeatherStationReadings, WeatherStation, STATION_TYPE
 
@@ -35,15 +37,23 @@ class RainwiseStation(WeatherStation):
     def _check_config(self):
         # TODO implement 
         return(True)
-
+    
     def _get_readings(self, start_datetime:datetime, end_datetime:datetime, 
-                      interval:int = 1):
+                      interval:int = 5):
         """
-        Params are start time, end time, and interval.
-        add_to: option for list to be passed in already containing metadata to be added to
-        Returns api response in a list with metadata
+        Params 
+            start time start of time interval in UTC (station requires local time and it's converted here)
+            end time: UTC data time object
+            interval = the number of minutes per reading per docs.  Readings are taken every 15 minutes. 
+
+            Returns api response in a list with metadata
         """
-        
+
+        # convert utc times to local station time per Rainwise api
+        station_tz = ZoneInfo(self.config.pytz())
+        start_datetime = start_datetime.astimezone(tz=station_tz)
+        end_datetime = end_datetime.astimezone(tz=station_tz)
+
         response = get( url='http://api.rainwise.net/main/v1.5/registered/get-historical.php',
                         params={'username': self.config.username,
                                 'sid': self.config.sid,
