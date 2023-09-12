@@ -319,7 +319,7 @@ class WeatherStation(ABC):
     #######################
     #### primary class interfaces
 
-    def get_readings(self, start_datetime : datetime = None, end_datetime : datetime = None):
+    def get_readings(self, start_datetime : datetime = None, end_datetime : datetime = None)->WeatherAPIData:
         """prepare start/end times and other params generically and then call station-specific method with that.
         start_datetime: date time in UTC time zone
         end_datetime: date time in UTC time zone.  If start_datetime is empty this is ignored 
@@ -374,7 +374,7 @@ class WeatherStation(ABC):
         return(self.current_response_data)
 
 
-    def transform(self, api_data = None):
+    def transform(self, api_data:WeatherAPIData = None)->WeatherStationReadings:
         """
         Transforms data and return it in a standardized format. 
         data: optional input used to load in data if transform of existing data dictionary is required.
