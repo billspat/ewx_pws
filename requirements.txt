@@ -1,10 +1,5 @@
-multiweatherapi
-python-dotenv
-pip==19.2.3
 Sphinx==1.8.5
-
-pytest==6.2.4
-pytz
+pytest
 pydantic
 
 # bump2version==0.5.11

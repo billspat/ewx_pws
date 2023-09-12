@@ -122,10 +122,20 @@ class WeatherAPIData(BaseModel):
     station_type: str
     request_id: str = Field(default =str(uuid4()))  # unique ID identifying this request event
     request_datetime: datetime
-    time_interval: UTCInterval =  None
+    time_interval: UTCInterval
     package_version: str  = Field(default = version('ewx_pws'))
 
     responses: list[WeatherAPIResponse]
+
+    def key(self):
+        """ unique string from this data for creating records or filenames"""
+        if self.time_interval:
+            timestamp = int(self.time_interval.start.timestamp())
+            k = f"{self.station_id}_{timestamp}_{self.request_id}"
+            return(k)
+        else:
+            raise ValueError("required time interval is blank, can't create key for this WeatherAPIData object")
+        
 
 class WeatherStationReading(BaseModel):
     """row of transformed weather data: combination of sensor values  
@@ -136,7 +146,7 @@ class WeatherStationReading(BaseModel):
     station_type: str
     request_id : str # unique ID of the request event to link with raw api output
     request_datetime : datetime 
-    time_interval: UTCInterval = None
+    time_interval: UTCInterval
 
     # TODO error status of these data 
     # TODO 'source' metadata for each value, 
@@ -161,6 +171,7 @@ class WeatherStationReading(BaseModel):
         reading['station_type'] = weather_api_data.station_type
         reading['request_id'] = weather_api_data.request_id
         reading['request_datetime'] = weather_api_data.request_datetime 
+        reading['time_interval'] = weather_api_data.time_interval
         
         return(cls.parse_obj(reading))
 
@@ -182,6 +193,24 @@ class WeatherStationReadings(BaseModel):
             readings.append(wsr)
         
         return(cls(readings = readings))
+    
+    def for_csv(self):
+        # for future version of pydantic, use model_dump()
+        return([reading.dict() for reading in self.readings])
+        
+    
+    def key(self):
+        """ create a unique value for this set of readings, using values from first reading only. 
+        for storing in db or creating filenames. 
+        Not a long term solution but in place to create filenames to save data
+        """
+
+        r = self.readings[0]
+        timestamp = int(r.time_interval.start.timestamp())
+        
+        k = f"{r.station_id}_{timestamp}_{r.request_id}"
+
+        return(k)
 
 
 ##########################################################
@@ -230,6 +259,8 @@ class WeatherStation(ABC):
         returns: object instance using GenericConfig type
         
         """
+
+        # TODO remove this hard-code positioning , which assumes station_config is in specific order
         config_dict = json.loads(station_config[2])
         
         # TODO : update this if the proposed record format is updated to include a tz field
@@ -254,10 +285,6 @@ class WeatherStation(ABC):
     @property
     def station_type(self):
         return(self.config.station_type)
-    
-    @property
-    def station_tz(self):
-        return(self.config.tz)
     
 
     #######################
@@ -405,33 +432,12 @@ class WeatherStation(ABC):
 
         return(dt.astimezone(timezone.utc))
 
-
+    @property
     def station_tz(self):
         """ config class stores tz as 2-char; convert into IANA timezone
         return zoneinfo.ZoneInfo object for use with astimezone() o replace() fns
         """
         return ZoneInfo(self.config._tzlist[self.config.tz])
-
-    def get_readings_local(self, start_datetime_local: datetime, end_datetime_local: datetime):
-        """ get reading for the timezone of the station.  This will be problematic for DST readings
-        datetimes with a tz set to one outside of station tz are invalid.  
-        Use UTC with get_reading() method instead
-        e.g. start_datetime_local == 6:00 am, is 6:00am for the tz of the station. """            
-    
-        def correct_tz(dt):
-            """ internal fn to adapt dt sent to local time of station.  """
-            if dt.tzinfo is None:
-                return(  dt.replace(self.station_tz()) )
-            
-            if  dt.tzinfo == self.station_tz():
-                return(dt)
-
-            raise ValueError(f"time argument timezone does not match station.  Remove timezone or use {self.station_tz()}")         
-
-        start_datetime_utc = correct_tz(start_datetime_local).astimezone(timezone.utc)
-        end_datetime_utc   = correct_tz(end_datetime_local).astimezone(timezone.utc)
-        return self.get_readings(start_datetime=start_datetime_utc, end_datetime=end_datetime_utc)
-
         
     def get_test_reading(self):
         """ test that current config is working and station is online

@@ -49,11 +49,7 @@ class RainwiseStation(WeatherStation):
             Returns api response in a list with metadata
         """
 
-        # convert utc times to local station time per Rainwise api
-        station_tz = ZoneInfo(self.config.pytz())
-        start_datetime = start_datetime.astimezone(tz=station_tz)
-        end_datetime = end_datetime.astimezone(tz=station_tz)
-
+        # note start/end times in station timezone
         response = get( url='http://api.rainwise.net/main/v1.5/registered/get-historical.php',
                         params={'username': self.config.username,
                                 'sid': self.config.sid,
@@ -61,8 +57,10 @@ class RainwiseStation(WeatherStation):
                                 'mac': self.config.mac,
                                 'format': self.config.ret_form,
                                 'interval': interval,
-                                'sdate': start_datetime,
-                                'edate': end_datetime})
+                                'sdate': start_datetime.astimezone(tz=self.station_tz),
+                                'edate': end_datetime.astimezone(tz=self.station_tz)
+                                }
+                        )
 
         return response
 
