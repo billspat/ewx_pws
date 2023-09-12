@@ -122,10 +122,20 @@ class WeatherAPIData(BaseModel):
     station_type: str
     request_id: str = Field(default =str(uuid4()))  # unique ID identifying this request event
     request_datetime: datetime
-    time_interval: UTCInterval =  None
+    time_interval: UTCInterval
     package_version: str  = Field(default = version('ewx_pws'))
 
     responses: list[WeatherAPIResponse]
+
+    def key(self):
+        """ unique string from this data for creating records or filenames"""
+        if self.time_interval:
+            timestamp = int(self.time_interval.start.timestamp())
+            k = f"{self.station_id}_{timestamp}_{self.request_id}"
+            return(k)
+        else:
+            raise ValueError("required time interval is blank, can't create key for this WeatherAPIData object")
+        
 
 class WeatherStationReading(BaseModel):
     """row of transformed weather data: combination of sensor values  
@@ -136,7 +146,7 @@ class WeatherStationReading(BaseModel):
     station_type: str
     request_id : str # unique ID of the request event to link with raw api output
     request_datetime : datetime 
-    time_interval: UTCInterval = None
+    time_interval: UTCInterval
 
     # TODO error status of these data 
     # TODO 'source' metadata for each value, 
@@ -161,6 +171,7 @@ class WeatherStationReading(BaseModel):
         reading['station_type'] = weather_api_data.station_type
         reading['request_id'] = weather_api_data.request_id
         reading['request_datetime'] = weather_api_data.request_datetime 
+        reading['time_interval'] = weather_api_data.time_interval
         
         return(cls.parse_obj(reading))
 
@@ -183,6 +194,24 @@ class WeatherStationReadings(BaseModel):
         
         return(cls(readings = readings))
     
+    def for_csv(self):
+        # for future version of pydantic, use model_dump()
+        return([reading.dict() for reading in self.readings])
+        
+    
+    def key(self):
+        """ create a unique value for this set of readings, using values from first reading only. 
+        for storing in db or creating filenames. 
+        Not a long term solution but in place to create filenames to save data
+        """
+
+        r = self.readings[0]
+        timestamp = int(r.time_interval.start.timestamp())
+        
+        k = f"{r.station_id}_{timestamp}_{r.request_id}"
+
+        return(k)
+
 
 ##########################################################
 ########        WeatherStation Base Class         ########
@@ -230,6 +259,8 @@ class WeatherStation(ABC):
         returns: object instance using GenericConfig type
         
         """
+
+        # TODO remove this hard-code positioning , which assumes station_config is in specific order
         config_dict = json.loads(station_config[2])
         
         # TODO : update this if the proposed record format is updated to include a tz field
