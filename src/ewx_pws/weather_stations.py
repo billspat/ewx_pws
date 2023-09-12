@@ -182,7 +182,7 @@ class WeatherStationReadings(BaseModel):
             readings.append(wsr)
         
         return(cls(readings = readings))
-
+    
 
 ##########################################################
 ########        WeatherStation Base Class         ########
@@ -254,10 +254,6 @@ class WeatherStation(ABC):
     @property
     def station_type(self):
         return(self.config.station_type)
-    
-    @property
-    def station_tz(self):
-        return(self.config.tz)
     
 
     #######################
@@ -405,33 +401,12 @@ class WeatherStation(ABC):
 
         return(dt.astimezone(timezone.utc))
 
-
+    @property
     def station_tz(self):
         """ config class stores tz as 2-char; convert into IANA timezone
         return zoneinfo.ZoneInfo object for use with astimezone() o replace() fns
         """
         return ZoneInfo(self.config._tzlist[self.config.tz])
-
-    def get_readings_local(self, start_datetime_local: datetime, end_datetime_local: datetime):
-        """ get reading for the timezone of the station.  This will be problematic for DST readings
-        datetimes with a tz set to one outside of station tz are invalid.  
-        Use UTC with get_reading() method instead
-        e.g. start_datetime_local == 6:00 am, is 6:00am for the tz of the station. """            
-    
-        def correct_tz(dt):
-            """ internal fn to adapt dt sent to local time of station.  """
-            if dt.tzinfo is None:
-                return(  dt.replace(self.station_tz()) )
-            
-            if  dt.tzinfo == self.station_tz():
-                return(dt)
-
-            raise ValueError(f"time argument timezone does not match station.  Remove timezone or use {self.station_tz()}")         
-
-        start_datetime_utc = correct_tz(start_datetime_local).astimezone(timezone.utc)
-        end_datetime_utc   = correct_tz(end_datetime_local).astimezone(timezone.utc)
-        return self.get_readings(start_datetime=start_datetime_utc, end_datetime=end_datetime_utc)
-
         
     def get_test_reading(self):
         """ test that current config is working and station is online
