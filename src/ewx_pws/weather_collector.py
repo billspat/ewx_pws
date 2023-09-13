@@ -42,8 +42,10 @@ class WeatherCollector():
     def save_readings(self, weather_data:WeatherStationReadings ) ->str:
         """save readings as csv"""
 
-        fieldnames = list(weather_data.readings[0].dict().keys())
-
+        # get field names by inspecting the basemodel class of the first reading
+        example_reading = weather_data.readings[0]
+        fieldnames = list(example_reading.__fields__.keys())
+        
         data_filename = os.path.join(self.data_path, f"weather_data_{weather_data.key()}.csv")
 
         with open(data_filename, 'w') as csvfile:
