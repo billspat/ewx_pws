@@ -1,4 +1,12 @@
 
+"""
+weather_collector.py
+
+class that engages with WeatherStations to pull weather data from all stations for a time interval
+
+currently reads stations from a csv file and saves to disk.   Should remove that and work with a data store. 
+note: there is some overlap with ewx_pws.py
+"""
 import os,json, csv
 from ewx_pws.ewx_pws import stations_from_file
 from ewx_pws.weather_stations import WeatherAPIData,WeatherStationReadings, WeatherStation
@@ -6,10 +14,15 @@ from ewx_pws.time_intervals import UTCInterval
 
 
 class WeatherCollector():
-    """ for list of stations, methods for reading and saving raw and structured reading data"""
+    """ for list of stations, methods for reading and saving raw and structured reading data
+    """
 
     def __init__(self, stations:list[WeatherStation], base_path="../weatherdata"):
-        """create collector from list of stations and path to save output"""
+        """create collector from list of stations and path to save output
+        params 
+            stations : list of weather stations
+            base_path : storage location
+        """
         self.stations = stations
         self.base_path = base_path
         self.raw_path = os.path.join(base_path, 'raw')
@@ -75,7 +88,7 @@ class WeatherCollector():
         """ combine transformed readings for all loaded stations into single array of dict.  
         The output can be loaded into a pandas data frame with df=pandas.DataFrame(readings)
 
-        this is a temporary version that does not save any raw outputs """
+        this is a temporary version that does not return raw api outputs """
         readings  = []
 
         # TOO also collect raw outputs into a standardized serializable format
@@ -98,3 +111,7 @@ class WeatherCollector():
 
         return( rawfiles, readingsfiles)
     
+    # TODO 
+    # get_historical_data
+    # giben the install date in config, get _all_ the data avaialble from the station.  
+    # 

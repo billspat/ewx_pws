@@ -136,6 +136,20 @@ class WeatherAPIData(BaseModel):
         else:
             raise ValueError("required time interval is blank, can't create key for this WeatherAPIData object")
         
+    def model_dump_record(self):
+        """ export to dict but only meta-data; keep the responses as json to store in 1 field"""
+        responses_json = self.responses.json()
+
+        return {
+         'station_id' : self.station_id,
+        'station_type' : self.station_type,
+        'request_id' : self.request_id,
+        'request_datetime' : self.request_datetime,
+        'time_interval' : self.time_interval,
+        'package_version' : self.package_version,
+        'responses' : responses_json
+        }
+        
 
 class WeatherStationReading(BaseModel):
     """row of transformed weather data: combination of sensor values  
@@ -194,7 +208,7 @@ class WeatherStationReadings(BaseModel):
         
         return(cls(readings = readings))
     
-    def for_csv(self):
+    def model_dump_record(self):
         # for future version of pydantic, use model_dump()
         return([reading.dict() for reading in self.readings])
         
