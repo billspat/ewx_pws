@@ -27,6 +27,7 @@ we don't have to keep the db in parity as we add fields
 
 #TODO use typing and type hints
 
+from sqlalchemy import engine,create_engine, inspect, text
 import pandas, sqlite3, os, logging
 
 from ewx_pws.ewx_pws import weather_station_factory
@@ -50,18 +51,76 @@ class WeatherStore():
         if not os.path.exists(db_file):
             Warning("db file {db_file} not found, creating new database")
             # build a new db
-        self.conn = sqlite3.connect(db_file)
-        self.conn.row_factory = sqlite3.Row
-        self.stations = {}
             
+        self.engine = create_engine(f"sqlite:///{db_file}")
+        # create a connection object.  see if we can just use it over and over
+        self.connection = self.engine.connect()
 
-    def dataframe2db(self, data_frame, if_exists = 'append'):
+        # def dict_factory(cursor, row):
+        #     d = {}
+        #     for idx, col in enumerate(cursor.description):
+        #         d[col[0]] = row[idx]
+        #     return d
+        
+        # # self.connection.row_factory = dict_factory
+
+        self.stations = {}
+  
+    def load_stations(self):
+        """from the connection in this object, read in the stations and create a list of station objects"""
+
+        # check that the table exist in db we are connected to
+        insp = inspect(self.engine)
+        if insp.has_table(table_name = self.stations_table):
+
+            # get the configs 
+            station_configs = self.db2dict(self.stations_table)
+            # build station dict
+            self.stations = {}
+
+            # not sure if we want to work with dicts or lists yet
+            if isinstance(station_configs, dict):
+                station_configs = list(station_configs)
+
+            for station_config in station_configs:
+                station_id = station_config['station_id']
+                self.stations[station_id] = weather_station_factory(station_config)
+
+        return(self.stations)
+
+
+    def db2dict(self, tablename):
+        # TODO ensure tablename is one we expect
+        rows = []
+        try:
+            result = self.connection.execute(text(f"select * from {tablename}"))
+            for row in result:
+                rows.append = row._mapping 
+        except Exception as e:
+            Warning(f"no rows found in {tablename}")
+    
+        return(rows)
+    
+
+    def db2dataframe(self, tablename):
+        """ standardized way to read an entire table"""
+        # TODO ensure tablename is one we expect
+    
+        df = pandas.read_sql_table(tablename, self.connection) 
+
+        # with self.engine.connect() as conn, conn.begin():  
+        #     df = pandas.read_sql_table(tablename, conn)  
+
+        return(df)
+    
+    def dataframe2db(self, data_frame, tablename, if_exists = 'append'):
         """ standarized method for inserting a dataframe into our database using pandas"""
         
         try:
-            nrows = data_frame.to_sql(self.conn, index=False, method = 'multi', if_exists=if_exists) 
+            with engine.connect() as conn, conn.begin():  
+                nrows = data_frame.to_sql(name=tablename, con=conn, index=False, if_exists=if_exists) 
         except Exception as e:
-            logging.exception(f" pandas database insert/append failed with {self.conn}:{e}")
+            logging.exception(f" pandas database insert/append failed with {self.connection}:{e}")
             return(None)
         
         return(nrows)
@@ -80,11 +139,11 @@ class WeatherStore():
             logging.debug("problem adding station(s) ")
 
 
-    def create_stations_table_from_file(self,station_file):
+    def create_stations_table_from_file(self,station_config_file):
         """ creates the table and loads up the object property"""
 
-        if os.path.exists(station_file):
-            stationsdf = pandas.read_csv(station_file)
+        if os.path.exists(station_config_file):
+            stationsdf = pandas.read_csv(station_config_file,header=1,quotechar="'")
             numrows = self.dataframe2db(self, stationsdf, if_exists = 'fail')
             if numrows and numrows > 0: 
                 stations = self.read_stations()
@@ -93,26 +152,13 @@ class WeatherStore():
                 return(None)
         else:
             raise FileExistsError(f"can't find stations file {station_file}")    
-
-
-    def read_stations(self):
-        """from the connection in this object, read in the stations and create a list of station objects"""
-        sql = f"select * from {self.stations_table}"
-        stations = {}
-        for row in self.conn.execute(sql):
-            station_id = row['station_id']
-            stations[station_id] = weather_station_factory(row)
-
-        # replaces and current station dict with one from DB
-        self.stations = stations
-        return(self.stations)
         
 
     def insert_readings(self,readings:WeatherStationReadings):
         """ add readings to db table.  if table does not exist, create it first. if table does exist readings fields must conform to table structure.  """
 
         readings_df = pandas.DataFrame(readings.model_dump_record())
-        readings_df.to_sql(name = self.readings_table, con = self.conn, index= False, if_exists = "append")
+        readings_df.to_sql(name = self.readings_table, con = self.connection, index= False, if_exists = "append")
 
     def insert_api_response(self,api_response:WeatherAPIData):
         api_response_df = api_response.model_dump_record()
