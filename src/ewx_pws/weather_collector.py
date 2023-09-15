@@ -90,14 +90,16 @@ class WeatherCollector():
 
         this is a temporary version that does not return raw api outputs """
         readings  = []
+        raws = []
 
         # TOO also collect raw outputs into a standardized serializable format
         for station in self.stations:
             # this could use threads here, or launch sub processes
             raw,data = self.collect(station, interval)
-            readings += data.for_csv()
+            readings += data.model_dump_record()
+            raws +=raw.model_dump_record()
 
-        return readings
+        return raws, readings
     
 
     def collect_all_stations(self, interval = UTCInterval.previous_fifteen_minutes()):
