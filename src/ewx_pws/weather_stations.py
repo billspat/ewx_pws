@@ -323,38 +323,7 @@ class WeatherStation(ABC):
     
         # this will raise error if config dictionary is not correct
         station_config = GenericConfig.parse_obj(config)
-    
-    #TODO remove this and require dict only
-    # this is a hold-over from reading from dot-env
-    @classmethod
-    def init_from_list(cls, station_config: list):
-        """create station object using config stored as a list, by converting to dict and invoking 
-        the other clas method. see GenericConfig type model above
-        
-        accept a list with the following elements in order:
-        station_id; station_type, config as json str, optionally include time zone
-        (in future time zone should be pulled out of this dict)
-        returns: object instance using GenericConfig type
-        
-        """
-
-        # TODO remove this hard-code positioning , which assumes station_config is in specific order
-        config_dict = json.loads(station_config[2])
-        
-        # TODO : update this if the proposed record format is updated to include a tz field
-        if 'tz' in config_dict.keys():
-            tz = config_dict['tz']
-        else:
-            tz = 'ET'
-        # create a dictionary from list... and call the class method above  
-        station_config_dict = {
-            'station_id': station_config[0],
-            'station_type': station_config[1],
-            'tz': tz,
-            'config': config_dict
-        }
-        return(cls.init_from_dict(station_config_dict))
-                
+                    
     # convenience/hiding methods
     @property
     def id(self):
