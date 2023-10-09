@@ -18,6 +18,8 @@ class RainwiseConfig(WeatherStationConfig):
 
 class RainwiseStation(WeatherStation):
     """ WeatherStation subclass for Rainwise API http://api.rainwise.net """
+    StationConfigClass = RainwiseConfig
+    station_type = 'RAINWISE'
 
     # time between readings in minutes for this station type
     interval_min = 15

@@ -30,7 +30,10 @@ class OnsetConfig(WeatherStationConfig):
     sensor_sn : dict[str,str] = Field(description="a dict of sensor alphanumeric serial numbers keyed on sensor type, e.g. {'atemp':'21079936-1'}") 
 
 class OnsetStation(WeatherStation):
+    StationConfigClass = OnsetConfig
+    station_type = 'ONSET'
 
+    
     # time between readings in minutes for this station type
     interval_min = 5
 

@@ -14,6 +14,9 @@ class DavisConfig(WeatherStationConfig):
         apisec         : str # API security that is used to compute the hash.
 
 class DavisStation(WeatherStation):
+    """Station class for Davis type stations"""
+    StationConfigClass = DavisConfig
+    station_type = 'DAVIS'
 
     # time between readings in minutes for this station type
     interval_min = 15

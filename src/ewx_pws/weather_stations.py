@@ -62,8 +62,10 @@ TIMEZONE_CODE_LIST = {
 
 
 class WeatherStationConfig(BaseModel):
-    """Base station configuration, includes common meta-data config common to all station types.  Must include a valid US Timezone 
-    Station-specifc config.  """
+    """Base station configuration, includes common meta-data config common to all station types.  
+    Must include a valid US Timezone code. 
+    Weather stations sub-class this and add field specific to their configuration.  
+    """
     station_id : str 
     install_date: datetime # the date the station started collecting data in it's location
     station_type : STATION_TYPE = "GENERIC"
@@ -77,15 +79,60 @@ class WeatherStationConfig(BaseModel):
             'ET': 'US/Eastern'
             }
     
+    station_config:str
+
+    class Config:
+        """ allow private member for timezone conversion"""
+        underscore_attrs_are_private = True
+            
+    ### timezone formatting
     def pytz(self):
         """return valide python timezone from 2-char timezone code in config 
         for use in datetime module
         """
         return(self._tzlist[self.tz])
+    
+    ### unserializer/serializers for db/record storage that accommodate fields in subclasses consistently
+    @classmethod
+    def init_from_record(cls, config_record: dict[str]):
+        """ create config obj from our standard serialization format (from disk/db/etc.  In the serialization format, additional station-specific
+        fields are stored as a JSON dictionary in the 'station_config.   Base class does not use this"""
+        
+        # convert str of datetime into datatime format
+        config_record['install_date'] = datetime.fromisoformat(config_record['install_date'])
 
-    class Config:
-        """ allow private member for timezone conversion"""
-        underscore_attrs_are_private = True
+        # station-type-specific config is held as JSON in a special field (station config). 
+        # This unpacks and loads any items from that 'station_config' field up into the class
+        if 'station_config' in config_record:
+            config_record.update(json.loads(config_record['station_config']))
+        
+        return(cls.parse_obj(config_record))
+    
+    def model_dump_record(self):
+        """creates dict format useful to store in db or CSV that accommodates any extra fields present in a subclass
+        are smushed into JSON and stored in a field "station_config"
+         This way records from all types of stations can be saved in the same table file/format """
+        
+        # these are the standard column headers for csv/db records
+        record_fields = set('station_id', 'install_date', 'station_type','tz')
+
+        # start by creating dict of all fields
+        all_fields = self.dict()
+        
+        # subset for the main columns we have in db records
+        record = {k: all_fields[k] for k in record_fields}
+        # create dict of all remaining subclass-specific fields, if any
+        station_specific = {k: all_fields[k] for k in self.__field_set__.difference(record_fields)}
+        
+        # put all station_specific (subclass) fields  into JSON field called 'station_config' 
+        record['station_config'] = json.dumps(station_specific)
+
+        # fix up fields as necessary for str storage
+        record['install_date'] = record['install_date'].isoformat(),
+    
+        return(record)
+
+
 
 class GenericConfig(WeatherStationConfig):
     """This configuration is used for testing, dev and for base class.  Station specific config is simply stored
@@ -102,6 +149,7 @@ class WeatherAPIResponse(BaseModel):
 
     @classmethod
     def from_response(cls, response:Response):
+        """ create data class from a python response object. We only need a subset of properties of the response object"""
         return cls(
             url =  response.request.url,
             status_code = response.status_code,
@@ -234,6 +282,9 @@ class WeatherStationReadings(BaseModel):
 class WeatherStation(ABC):
     """abstract base class for a weather station to access it's API and retrieve data"""
     
+    StationConfigClass = GenericConfig
+    station_type = 'GENERIC'
+
     # used by subclasses as default when there is no data from station
     empty_response = ['{}']
     
@@ -246,7 +297,12 @@ class WeatherStation(ABC):
     ####### constructor #########
     def __init__(self, config:GenericConfig):
         """create station object using Config data model """    
-        self.config = config
+
+        if isinstance(config,self.StationConfigClass):
+            self.config = config
+        elif isinstance(config, dict):
+            self.config = self.StationConfigClass.parse_obj(config)
+
         self._id = config.station_id
         # store latest resp object as returned from request
         self.current_response = None
@@ -254,14 +310,22 @@ class WeatherStation(ABC):
         self.current_response_data = None
         
     ####### alternative constructors as class methods #########
+
+    @classmethod
+    def init_from_record(cls, config_record:dict):
+        # attempt to build config object from config record
+        station_config = cls.StationConfigClass.init_from_record(config_record)
+        return( cls(station_config) )
+
     @classmethod
     def init_from_dict(cls, config:dict):
         """ accept a dictionary to create this class, rather than the config Type class"""
     
         # this will raise error if config dictionary is not correct
         station_config = GenericConfig.parse_obj(config)
-        return(cls(station_config))
-
+    
+    #TODO remove this and require dict only
+    # this is a hold-over from reading from dot-env
     @classmethod
     def init_from_list(cls, station_config: list):
         """create station object using config stored as a list, by converting to dict and invoking 

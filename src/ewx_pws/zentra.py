@@ -14,10 +14,12 @@ class ZentraConfig(WeatherStationConfig):
         token          : str # The user's access token.
 
 class ZentraStation(WeatherStation):
+    StationConfigClass = ZentraConfig
+    station_type = 'ZENTRA'
 
     # time between readings in minutes for this station type
     interval_min = 5
-
+    
     @classmethod
     def init_from_dict(cls, config:dict):
         """ accept a dictionary to create this class, rather than the Type class"""

@@ -12,7 +12,10 @@ class SpectrumConfig(WeatherStationConfig):
         apikey         : str #  The user's API access key.  
 
 class SpectrumStation(WeatherStation):
-
+    """ for Spectrum weather stations"""
+    StationConfigClass = SpectrumConfig
+    station_type = 'SPECTRUM'
+    
     # time between readings in minutes for this station type
     interval_min = 5
 
