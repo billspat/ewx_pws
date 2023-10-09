@@ -22,6 +22,7 @@ logging.basicConfig(level=logging.NOTSET, format='%(asctime)s-%(process)d-%(leve
 STATION_CLASS_TYPES = {'ZENTRA': ZentraStation, 'ONSET': OnsetStation, 'DAVIS': DavisStation,'RAINWISE': RainwiseStation, 'SPECTRUM':SpectrumStation, 'LOCOMOS':LocomosStation }
 CONFIG_CLASS_TYPES = {'ZENTRA': ZentraConfig, 'ONSET': OnsetConfig, 'DAVIS': DavisConfig,'RAINWISE': RainwiseConfig, 'SPECTRUM':SpectrumConfig, 'LOCOMOS':LocomosConfig }
 
+# deprecated = see WeatherCollector class
 def get_readings(stations:list,
                 start_datetime_str:str = None,
                 end_datetime_str:str = None,
@@ -111,6 +112,17 @@ def read_station_configs(csv_file_path:str)->dict:
     return(configs)
 
 
+def station_dict_from_records(csv_file_path:str)->dict:
+
+    with open(csv_file_path) as csvfile:
+        configreader = csv.DictReader(csv_file_path,  
+                                fieldnames = ['station_id','station_type','install_date','tz','station_config'],
+,                               delimiter=",", quotechar="'") #         
+        stations = [WeatherStation.init_from_record(config) for config in configreader]
+
+    return stations
+
+    
 def station_dict_from_file(csv_file_path:str):
     """ given a csv file of stations, read them into standard format
     param csv_file_path path to a csv file with specific format for stations
@@ -127,10 +139,9 @@ def station_dict_from_file(csv_file_path:str):
         raise ValueError(f"file {csv_file_path} returned empty config list")
     
     if not isinstance(configs,dict):
-        raise ValueError(f"file {csv_file_path} returned non-list")
         logging.warning("config file returned something other than a list ")
         warnings.warn("config file returned something other than a list, empty station list")
-        return {}
+        raise ValueError(f"file {csv_file_path} returned non-list")
     
     for station_id in configs:
         station_config = configs[station_id]
@@ -186,6 +197,8 @@ def stations_of_type(stations, station_type:STATION_TYPE)->list:
     return(s)
 
 
+### NOTE these factories are deprecated, the WeatherStation class methods can be called directly
+
 # def weather_station_factory(station_type:STATION_TYPE, config:dict, station_id:str) -> type[WeatherStation]:
 def weather_station_factory(station_config:dict, station_class_types = STATION_CLASS_TYPES) -> type[WeatherStation]:
     """"given a dictionary of configuration information (e.g. from CSV), create a station object for that type
@@ -203,6 +216,23 @@ def weather_station_factory(station_config:dict, station_class_types = STATION_C
     
     return station 
 
+def weather_station_factory_from_record(config_record:dict) -> type[WeatherStation]:
+    """"given a configuration record (e.g. from CSV/db), create a station object for that type
+    raises an exception if can't create the station because of bad configuration. 
+    
+    config_record: dict of station config in format per  """
+    try:
+        station_type = config_record['station_type']
+        config_class = CONFIG_CLASS_TYPES[station_type]
+        # attempt to build config object from config record
+        station_config = config_class.init_from_records(config_record)
+        # 
+        station = STATION_CLASS_TYPES[station_type].init(station_config)
+    except Exception as e: 
+        logging.error(f"could not create station type {station_type} id {station_config['station_id']} from config: {e}")
+        raise e
+    
+    return station 
 
 
 def validate_station_config(station_type:STATION_TYPE, station_config:dict)->bool:

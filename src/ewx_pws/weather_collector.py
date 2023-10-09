@@ -93,7 +93,7 @@ class WeatherCollector():
         for station in self.stations:
             # this could use threads here, or launch sub processes
             raw,data = self.collect(station, interval)
-            readings += data.for_csv()
+            readings += data.model_dump_record()
 
         return readings
     
