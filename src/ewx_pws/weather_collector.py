@@ -55,8 +55,10 @@ class WeatherCollector():
     def save_readings(self, weather_data:WeatherStationReadings ) ->str:
         """save readings as csv"""
 
-        fieldnames = list(weather_data.readings[0].dict().keys())
-
+        # get field names by inspecting the basemodel class of the first reading
+        example_reading = weather_data.readings[0]
+        fieldnames = list(example_reading.__fields__.keys())
+        
         data_filename = os.path.join(self.data_path, f"weather_data_{weather_data.key()}.csv")
 
         with open(data_filename, 'w') as csvfile:
@@ -85,21 +87,29 @@ class WeatherCollector():
     def collect_readings(self, interval = UTCInterval.previous_fifteen_minutes()):
         """ combine transformed readings for all loaded stations into single array of dict.  
         The output can be loaded into a pandas data frame with df=pandas.DataFrame(readings)
-
-        this is a temporary version that does not return raw api outputs """
+        params
+            interval:  range of times in UTCInterval format
+        returns two lists: list of raw outputs and list ore readings"""
         readings  = []
+        raws = []
 
         # TOO also collect raw outputs into a standardized serializable format
         for station in self.stations:
             # this could use threads here, or launch sub processes
             raw,data = self.collect(station, interval)
             readings += data.model_dump_record()
+            raws = raws + raw.model_dump_record()
 
-        return readings
+        return raws, readings
     
 
     def collect_all_stations(self, interval = UTCInterval.previous_fifteen_minutes()):
-        """ collect and save from all stations in class"""
+        """ collect and save from all stations in class
+        
+        side-effect: 
+            runs 'collect_and_save' which saves CSV files to disk
+        returns
+            two lists : raw files and readings files saved to dist"""
         rawfiles = []
         readingsfiles = []
         for station in self.stations:

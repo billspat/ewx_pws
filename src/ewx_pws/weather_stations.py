@@ -186,7 +186,7 @@ class WeatherAPIData(BaseModel):
         
     def model_dump_record(self):
         """ export to dict but only meta-data; keep the responses as json to store in 1 field"""
-        responses_json = self.responses.json()
+        responses_json = "[" + ",".join([response.json() for response in self.responses]) + "]"
 
         return {
          'station_id' : self.station_id,
