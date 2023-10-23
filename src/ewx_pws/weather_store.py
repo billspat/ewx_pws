@@ -27,11 +27,15 @@ we don't have to keep the db in parity as we add fields
 
 #TODO use typing and type hints
 
-from sqlalchemy import engine,create_engine, inspect, text
-import pandas, sqlite3, os, logging
+from sqlalchemy import engine,create_engine, inspect, text, insert
+import pandas, sqlite3, os, logging, json
+from datetime import datetime
+
+from ewx_pws.weather_stations import WeatherStation
 
 from ewx_pws.ewx_pws import weather_station_factory
 from ewx_pws.weather_stations import WeatherStationReadings, WeatherAPIData, WeatherAPIResponse
+
 
 class WeatherStore():
     """ this is a very simple class to build and use a SQLite database to 
@@ -56,35 +60,30 @@ class WeatherStore():
         # create a connection object.  see if we can just use it over and over
         self.connection = self.engine.connect()
 
-        # def dict_factory(cursor, row):
-        #     d = {}
-        #     for idx, col in enumerate(cursor.description):
-        #         d[col[0]] = row[idx]
-        #     return d
-        
-        # # self.connection.row_factory = dict_factory
-
         self.stations = {}
   
+    def import_stations(self, station_config_file):
+        with open(station_config_file) as csvfile:
+            configreader = csv.DictReader(csvfile,  
+                        fieldnames = ['station_id','station_type','install_date','tz','station_config'],
+                        delimiter=",", quotechar="'") # 
+            for config in configreader:
+                self.stations[config['station_id']] =  WeatherStation.init_from_record(config)
+
     def load_stations(self):
         """from the connection in this object, read in the stations and create a list of station objects"""
+        from ewx_pws.ewx_pws import STATION_CLASS_TYPES as station_class_types
 
         # check that the table exist in db we are connected to
         insp = inspect(self.engine)
         if insp.has_table(table_name = self.stations_table):
+            result = self.connection.execute(text(f"select * from {self.stations_table}"))
 
-            # get the configs 
-            station_configs = self.db2dict(self.stations_table)
             # build station dict
             self.stations = {}
 
-            # not sure if we want to work with dicts or lists yet
-            if isinstance(station_configs, dict):
-                station_configs = list(station_configs)
-
-            for station_config in station_configs:
-                station_id = station_config['station_id']
-                self.stations[station_id] = weather_station_factory(station_config)
+            for row in result:
+                self.stations[row['station_id']] =  WeatherStation.init_from_record(row)
 
         return(self.stations)
 
@@ -151,7 +150,7 @@ class WeatherStore():
             else: 
                 return(None)
         else:
-            raise FileExistsError(f"can't find stations file {station_file}")    
+            raise FileExistsError(f"can't find stations file {station_config_file}")    
         
 
     def insert_readings(self,readings:WeatherStationReadings):
