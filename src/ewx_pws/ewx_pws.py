@@ -117,7 +117,7 @@ def station_dict_from_records(csv_file_path:str)->dict:
     with open(csv_file_path) as csvfile:
         configreader = csv.DictReader(csv_file_path,  
                                 fieldnames = ['station_id','station_type','install_date','tz','station_config'],
-,                               delimiter=",", quotechar="'") #         
+                               delimiter=",", quotechar="'") #         
         stations = [WeatherStation.init_from_record(config) for config in configreader]
 
     return stations
