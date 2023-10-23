@@ -1,7 +1,7 @@
 """utils for editing time stamps"""
 
 from datetime import datetime, timezone, timedelta
-from pydantic import BaseModel, root_validator, validator
+from pydantic import BaseModel, model_validator, field_validator # validator
 
 def is_tz_aware(dt:datetime)->bool:
     """ based on documentation, test if a datetime is timezone aware (T) or naive (F)
@@ -26,7 +26,7 @@ def is_utc(dt:datetime)->bool:
 class datetimeUTC(BaseModel):
     """a datetime object guaranteed to be UTC tz aware"""
     value: datetime 
-    @validator('value')
+    @field_validator('value')
     def check_datetime_utc(cls, value):
         assert is_utc(value)
         return value
@@ -34,24 +34,27 @@ class datetimeUTC(BaseModel):
 class UTCInterval(BaseModel):
     """ datetime interval that requires user to supply UTC datetimes.  
     Useful for passing start and end times into functions"""
+    
+    model_config = {'allow_reuse': True}
+    
     start: datetime
     end: datetime
-    class Config:
-        allow_reuse=True
- 
-    @validator('start', 'end',allow_reuse=True)
-    def check_datetime_utc(cls, field):
-        if is_utc(field):
-            return field
+    
+    @field_validator('start', 'end')
+    @classmethod
+    def check_datetime_utc(cls, v):
+        """ ensure datetime value is utc"""
+        if is_utc(v):
+            return v
         raise ValueError("datetime must have a timezone and must be UTC")
     
     # this is a pre-validation step
-    @root_validator(allow_reuse=True,pre=True)
-    def validate_utc_interval(cls, values):
+    @model_validator(mode='after')
+    def validate_utc_interval(self):
         """ensure that start is before end"""
 
-        if (values.get('start') < values.get('end')):
-            return(values)
+        if self.start <= self.end:
+            return self
         
         raise ValueError('end date-time must come after start date-time')
         
