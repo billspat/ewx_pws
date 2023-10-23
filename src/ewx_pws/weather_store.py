@@ -28,7 +28,7 @@ we don't have to keep the db in parity as we add fields
 #TODO use typing and type hints
 
 from sqlalchemy import engine,create_engine, inspect, text, insert
-import pandas, sqlite3, os, logging, json
+import pandas, sqlite3, os, logging, json, csv
 from datetime import datetime
 
 from ewx_pws.weather_stations import WeatherStation
@@ -44,9 +44,11 @@ class WeatherStore():
     
     # strategy
     # imported by collector
-    # collector uses the store to get the station list
+    # collector uses the store to get the station list, 
+    #      how does that get updated?   read from CSV file and throw out existing stations?  insert new station?   
     # 
     stations_table = "STATIONS"
+    stations_fields = ['station_id','station_type','install_date','tz','station_config'],
     raw_table = "RESPONSES"
     readings_table = "READINGS"
 
@@ -63,12 +65,16 @@ class WeatherStore():
         self.stations = {}
   
     def import_stations(self, station_config_file):
+        """ create station objects from a CSV file.  Doesn't create a table or records in the db"""
         with open(station_config_file) as csvfile:
-            configreader = csv.DictReader(csvfile,  
-                        fieldnames = ['station_id','station_type','install_date','tz','station_config'],
-                        delimiter=",", quotechar="'") # 
+            configreader = csv.DictReader(
+                csvfile,  
+                fieldnames = self.stations_fields,
+                delimiter=",", 
+                quotechar="'") 
             for config in configreader:
                 self.stations[config['station_id']] =  WeatherStation.init_from_record(config)
+
 
     def load_stations(self):
         """from the connection in this object, read in the stations and create a list of station objects"""
