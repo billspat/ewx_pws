@@ -33,8 +33,7 @@ def test_station_config(station_type, fake_station_configs):
     # operations on it.
     available_configs = ewx_pws.configs_of_type(fake_station_configs, station_type)
     for config in available_configs:
-        c = StationConfigType.parse_obj(config)
-        # will this work? 
+        c = StationConfigType.model_validate(config)
         assert isinstance(c, StationConfigType)
 
 def test_station_class_with_fake_config(station_type, fake_station_configs):

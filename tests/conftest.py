@@ -139,7 +139,14 @@ def utc_time_interval(time_interval):
 @pytest.fixture(scope="session")
 def generic_station_config():
     """ example config dictionary for generic station, note no sn, password or other info like other stations"""
-    return( {'station_id': 'fakestation', 'station_type': "GENERIC", 'tz': 'ET', 'install_date': datetime.fromisoformat('2023-05-01')})
+    return( {
+        'station_id': 'fakestation', 
+        'station_type': "GENERIC", 
+        'tz': 'ET', 
+        'install_date': datetime.fromisoformat('2023-05-01'),
+        'station_config' : "{'config':{}}",
+        'config': {}
+        })
 
 
 @pytest.fixture(scope="session")

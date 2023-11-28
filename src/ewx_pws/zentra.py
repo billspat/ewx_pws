@@ -25,7 +25,7 @@ class ZentraStation(WeatherStation):
         """ accept a dictionary to create this class, rather than the Type class"""
 
         # this will raise error if config dictionary is not correct
-        station_config = ZentraConfig.parse_obj(config)
+        station_config = ZentraConfig.model_validate(config)
         return(cls(station_config))
 
     

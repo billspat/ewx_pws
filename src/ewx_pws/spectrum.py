@@ -25,7 +25,7 @@ class SpectrumStation(WeatherStation):
         """ accept a dictionary to create this class, rather than the Type class"""
 
         # this will raise error if config dictionary is not correct
-        station_config = SpectrumConfig.parse_obj(config)
+        station_config = SpectrumConfig.model_validate(config)
         return(cls(station_config))
 
     

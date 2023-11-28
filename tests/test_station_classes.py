@@ -30,7 +30,7 @@ def fake_station_class():
 
 def test_weatherstation_config_type(generic_station_config):
     # test can parse good config
-    ws =  WeatherStationConfig.parse_obj(generic_station_config)
+    ws =  WeatherStationConfig.model_validate(generic_station_config)
     assert isinstance(ws, WeatherStationConfig)
 
 def test_weatherstation_config_timezone_validation(generic_station_config):    
@@ -38,19 +38,19 @@ def test_weatherstation_config_timezone_validation(generic_station_config):
     # test timezone validation with invalid tz
     generic_station_config['tz'] = 'XX'
     with pytest.raises(ValidationError):
-        ws =  WeatherStationConfig.parse_obj(generic_station_config)
+        ws =  WeatherStationConfig.model_validate(generic_station_config)
 
 def test_tz_convert(generic_station_config):
     """basic test that the convert works for one timezone"""
     # set to a known timezone
     generic_station_config['tz'] = 'ET'
-    ws =  WeatherStationConfig.parse_obj(generic_station_config)
+    ws =  WeatherStationConfig.model_validate(generic_station_config)
     assert ws.pytz() == 'US/Eastern'
 
     
 
 def test_can_subclass_weather_station(generic_station_config,fake_station_class):
-    fake_config = WeatherStationConfig.parse_obj(generic_station_config)
+    fake_config = WeatherStationConfig.model_validate(generic_station_config)
     fake_station_1 = fake_station_class(fake_config)
     assert isinstance(fake_station_1,WeatherStation)
     

@@ -26,17 +26,20 @@ will import this module.
 WeatherStation.getreadings returns a complex type that is a list of dictionary (should it be a class?)
 """
 
-import pytz, json, warnings, logging
+#TODO see some code in models.py that should be here that is a new way to organize the data classes for validation and loading
+#TODO get rid of madeup 2-character timezones - just use the standard IANA timezones used by python (and Operating systems) in ZoneInfo/tzdata packages
+#   see models.py for example
+
+import json, warnings, logging
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
-# from pytz import timezone
 from requests import Response, Request
 from abc import ABC, abstractmethod
 from uuid import uuid4
 
 
 # typing and Pydantic 
-from pydantic import BaseModel, Field, ValidationError, validator
+from pydantic import BaseModel, Field, ConfigDict, ValidationError, field_validator
 from typing import Literal
 
 # package local
@@ -69,7 +72,7 @@ class WeatherStationConfig(BaseModel):
     station_id : str 
     install_date: datetime # the date the station started collecting data in it's location
     station_type : STATION_TYPE = "GENERIC"
-    tz : TIMEZONE_CODE = Field(default='ET', description="US two-character time zone of the station location ( 'HT','AT','PT','MT','CT','ET')") 
+    tz : TIMEZONE_CODE = 'ET' # description="US two-character time zone of the station location ( 'HT','AT','PT','MT','CT','ET')") 
     _tzlist: dict[str:str] = {
             'HT': 'US/Hawaii',
             'AT': 'US/Alaska',
@@ -77,21 +80,16 @@ class WeatherStationConfig(BaseModel):
             'MT': 'US/Mountain',
             'CT': 'US/Central',
             'ET': 'US/Eastern'
-            }
-    
-    station_config:str
+            } 
+    station_config:str  
 
-    class Config:
-        """ allow private member for timezone conversion"""
-        underscore_attrs_are_private = True
-            
     ### timezone formatting
     def pytz(self):
         """return valide python timezone from 2-char timezone code in config 
         for use in datetime module
         """
         return(self._tzlist[self.tz])
-    
+        
     ### unserializer/serializers for db/record storage that accommodate fields in subclasses consistently
     @classmethod
     def init_from_record(cls, config_record: dict[str]):
@@ -106,7 +104,7 @@ class WeatherStationConfig(BaseModel):
         if 'station_config' in config_record:
             config_record.update(json.loads(config_record['station_config']))
         
-        return(cls.parse_obj(config_record))
+        return(cls.model_validate(config_record))
     
     def model_dump_record(self):
         """creates dict format useful to store in db or CSV that accommodates any extra fields present in a subclass
@@ -133,11 +131,10 @@ class WeatherStationConfig(BaseModel):
         return(record)
 
 
-
 class GenericConfig(WeatherStationConfig):
     """This configuration is used for testing, dev and for base class.  Station specific config is simply stored
     in a dictionary"""
-    config:dict = {}
+    # config:dict = {}
 
 class WeatherAPIResponse(BaseModel):
     """ extract data elements of a requests.Response for persisting/serializing"""
@@ -146,13 +143,13 @@ class WeatherAPIResponse(BaseModel):
     reason: str 
     text: str 
     content: bytes
-
+    
     @classmethod
     def from_response(cls, response:Response):
         """ create data class from a python response object. We only need a subset of properties of the response object"""
         return cls(
             url =  response.request.url,
-            status_code = response.status_code,
+            status_code = str(response.status_code),
             reason = response.reason, 
             text = response.text, 
             content = response.content
@@ -165,14 +162,13 @@ class WeatherAPIData(BaseModel):
     along with meta data. 
     This is use to store the outputs from the API for debugging
     """
-    
+    #
     station_id: str
     station_type: str
-    request_id: str = Field(default =str(uuid4()))  # unique ID identifying this request event
+    request_id: str = str(uuid4())  # unique ID identifying this request event
     request_datetime: datetime
     time_interval: UTCInterval
-    package_version: str  = Field(default = version('ewx_pws'))
-
+    package_version: str  = version('ewx_pws')
     responses: list[WeatherAPIResponse]
 
     def key(self):
@@ -183,19 +179,18 @@ class WeatherAPIData(BaseModel):
             return(k)
         else:
             raise ValueError("required time interval is blank, can't create key for this WeatherAPIData object")
-        
+   
     def model_dump_record(self):
         """ export to dict but only meta-data; keep the responses as json to store in 1 field"""
         responses_json = "[" + ",".join([response.json() for response in self.responses]) + "]"
-
         return {
-         'station_id' : self.station_id,
-        'station_type' : self.station_type,
-        'request_id' : self.request_id,
-        'request_datetime' : self.request_datetime,
-        'time_interval' : self.time_interval,
-        'package_version' : self.package_version,
-        'responses' : responses_json
+            'station_id' : self.station_id,
+            'station_type' : self.station_type,
+            'request_id' : self.request_id,
+            'request_datetime' : self.request_datetime,
+            'time_interval' : self.time_interval,
+            'package_version' : self.package_version,
+            'responses' : responses_json
         }
         
 
@@ -209,18 +204,16 @@ class WeatherStationReading(BaseModel):
     request_id : str # unique ID of the request event to link with raw api output
     request_datetime : datetime 
     time_interval: UTCInterval
-
     # TODO error status of these data 
     # TODO 'source' metadata for each value, 
     # e.g. atemp_src = "API" or similar
-
     data_datetime : datetime    
-    atemp : float or None = None      # celsius 
-    pcpn  : float or None = None        # mm, > 0
-    relh  : float or None = None       # percent
-    lws0  : float or None = None       # this is an nominal reading or 0 or 1 (wet / not wet)
-
-    @validator('request_datetime', 'data_datetime',allow_reuse=True)
+    atemp : float or None = None   # celsius 
+    pcpn  : float or None = None   # mm, > 0
+    relh  : float or None = None   # percent
+    lws0  : float or None = None   # this is an nominal reading or 0 or 1 (wet / not wet)
+    
+    @field_validator('request_datetime', 'data_datetime')
     def check_datetime_utc(cls, field):
         if is_utc(field):
             return field
@@ -233,9 +226,8 @@ class WeatherStationReading(BaseModel):
         reading['station_type'] = weather_api_data.station_type
         reading['request_id'] = weather_api_data.request_id
         reading['request_datetime'] = weather_api_data.request_datetime 
-        reading['time_interval'] = weather_api_data.time_interval
-        
-        return(cls.parse_obj(reading))
+        reading['time_interval'] = weather_api_data.time_interval   
+        return(cls.model_validate(reading))
 
 
 class WeatherStationReadings(BaseModel):
@@ -301,7 +293,7 @@ class WeatherStation(ABC):
         if isinstance(config,self.StationConfigClass):
             self.config = config
         elif isinstance(config, dict):
-            self.config = self.StationConfigClass.parse_obj(config)
+            self.config = self.StationConfigClass.model_validate(config)
 
         self._id = config.station_id
         # store latest resp object as returned from request
@@ -322,7 +314,7 @@ class WeatherStation(ABC):
         """ accept a dictionary to create this class, rather than the config Type class"""
     
         # this will raise error if config dictionary is not correct
-        station_config = GenericConfig.parse_obj(config)
+        station_config = GenericConfig.model_validate(config)
                     
     # convenience/hiding methods
     @property
@@ -415,7 +407,7 @@ class WeatherStation(ABC):
             request_datetime = request_time,
             time_interval = interval,
             responses = weather_api_responses,
-            package_version  = 0.1 # version('ewx_pws')
+            package_version  = version('ewx_pws')
         )
 
         return(self.current_response_data)
@@ -439,7 +431,7 @@ class WeatherStation(ABC):
             # assuming api_data was unserialized (CSV, db, etc), build the 
             # data class that holds it
             # this will raise exceptions if data is not in correct format
-            api_data = WeatherAPIData.parse_obj(api_data)
+            api_data = WeatherAPIData.model_validate(api_data)
         
         # responses are store in array since some stations return an array (one element per day)
         # each array item when transformed will output  list of data values

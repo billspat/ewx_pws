@@ -41,7 +41,7 @@ class LocomosStation(WeatherStation):
     def init_from_dict(cls, config:dict):
         """ accept a dictionary to create this class, rather than the Type class"""
         # this will raise error if config dictionary is not correct
-        station_config = LocomosConfig.parse_obj(config)
+        station_config = LocomosConfig.model_validate(config)
         return(cls(station_config))
 
     def __init__(self,config: LocomosConfig):

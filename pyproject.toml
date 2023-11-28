@@ -1,13 +1,20 @@
 [tool.poetry]
 name = "ewx_pws"
 version = "0.1.0"
-description = "Support for MSU Enviroweather Network Personal Weather Stations"
+description = "MSU Enviroweather Network Personal Weather Stations"
 authors = ["Patrick Bills"]
 license = "MIT"
 readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.9"
+Sphinx = "5.3.0"
+pytest = "6.2.4"
+pydantic = "^2.4.2"
+SQLAlchemy = "1.4.41"
+alembic = "1.12.0"
+pandas  = "2.1.0"
+psycopg2-binary = "2.9.7"
 
 [tool.poetry.dev-dependencies]
 
