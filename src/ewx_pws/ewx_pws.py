@@ -5,13 +5,14 @@ import json, os,csv, warnings, logging
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 
-from ewx_pws.weather_stations import WeatherStation, STATION_TYPE, STATION_TYPE_LIST
-from ewx_pws.davis import DavisStation, DavisConfig
-from ewx_pws.locomos import LocomosStation, LocomosConfig
-from ewx_pws.rainwise import RainwiseStation, RainwiseConfig
-from ewx_pws.spectrum import SpectrumStation, SpectrumConfig
-from ewx_pws.onset import OnsetStation, OnsetConfig
-from ewx_pws.zentra import ZentraStation, ZentraConfig
+from weather_stations import STATION_TYPE
+from weather_stations.weather_station import WeatherStation  
+from weather_stations.davis import DavisStation, DavisConfig
+from weather_stations.locomos import LocomosStation, LocomosConfig
+from weather_stations.rainwise import RainwiseStation, RainwiseConfig
+from weather_stations.spectrum import SpectrumStation, SpectrumConfig
+from weather_stations.onset import OnsetStation, OnsetConfig
+from weather_stations.zentra import ZentraStation, ZentraConfig
 
 
 from ewx_pws.time_intervals import previous_fifteen_minute_period

@@ -1,4 +1,4 @@
-from ewx_pws.weather_stations import  WeatherStationConfig, WeatherStation, TIMEZONE_CODE
+from weather_stations.weather_station import  WeatherStationConfig, WeatherStation
 from pydantic import ValidationError
 import requests
 import pytest, json, pytz, datetime

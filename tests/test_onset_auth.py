@@ -1,6 +1,6 @@
 """ONSET specific station tests"""
 
-from ewx_pws.onset import OnsetStation, WeatherStation
+from weather_stations.onset import OnsetStation
 from ewx_pws.ewx_pws import configs_of_type
 import re
 

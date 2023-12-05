@@ -1,4 +1,5 @@
-from ewx_pws.ewx_pws import read_station_configs, STATION_TYPE_LIST
+from ewx_pws.ewx_pws import read_station_configs
+from weather_stations import STATION_TYPE_LIST
 
 def test_station_configs(station_file):
     station_configs = read_station_configs(station_file)

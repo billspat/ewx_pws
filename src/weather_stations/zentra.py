@@ -6,7 +6,7 @@ from requests import get
 from datetime import datetime, timezone
 import pytz # instead of zone info to be able to use current config timezone codes 
 
-from ewx_pws.weather_stations import WeatherStationConfig, WeatherStation, STATION_TYPE
+from weather_stations.weather_station import WeatherStationConfig, WeatherStation, STATION_TYPE
 
 class ZentraConfig(WeatherStationConfig):
         station_type   : STATION_TYPE = 'ZENTRA'

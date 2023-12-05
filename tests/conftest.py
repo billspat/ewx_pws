@@ -15,7 +15,7 @@ from zoneinfo import ZoneInfo
 
 ###########################
 ## CONFIG FROM IMPORTED CONSTANTS
-from ewx_pws.weather_stations import STATION_TYPE_LIST
+from weather_stations import STATION_TYPE_LIST
 # TODO improve this obvious kludge to avoid testing these types
 if 'GENERIC' in STATION_TYPE_LIST:
     STATION_TYPE_LIST.remove('GENERIC')

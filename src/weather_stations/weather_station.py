@@ -45,14 +45,16 @@ from typing import Literal
 # package local
 from ewx_pws.time_intervals import is_tz_aware, is_utc, previous_fourteen_minute_period, UTCInterval
 from importlib.metadata import version
+from weather_stations import STATION_TYPE
 
 ##########################################################
 ########          GLOBALS and TYPE MODELS         ########
 ##########################################################
 
 # station type type, like an enum
-STATION_TYPE = Literal['ZENTRA', 'ONSET', 'DAVIS', 'RAINWISE', 'SPECTRUM', 'LOCOMOS', 'GENERIC'] 
-STATION_TYPE_LIST =   ['ZENTRA', 'ONSET', 'DAVIS', 'RAINWISE', 'SPECTRUM', 'LOCOMOS', 'GENERIC']
+# STATION_TYPE = Literal['ZENTRA', 'ONSET', 'DAVIS', 'RAINWISE', 'SPECTRUM', 'LOCOMOS', 'GENERIC'] 
+# STATION_TYPE_LIST =   ['ZENTRA', 'ONSET', 'DAVIS', 'RAINWISE', 'SPECTRUM', 'LOCOMOS', 'GENERIC']
+
 TIMEZONE_CODE = Literal['HT','AT','PT','MT','CT','ET']        
 TIMEZONE_CODE_LIST = {
             'HT': 'US/Hawaii',

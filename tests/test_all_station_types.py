@@ -4,10 +4,9 @@ import pytest, logging, json
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo, available_timezones
 
-from ewx_pws import ewx_pws
-
-from ewx_pws.weather_stations import WeatherStation, WeatherAPIData, WeatherAPIResponse, \
-    WeatherStationReading, WeatherStationReadings, TIMEZONE_CODE
+from ewx_pws.ewx_pws import STATION_CLASS_TYPES,CONFIG_CLASS_TYPES,configs_of_type 
+from weather_stations import STATION_TYPE_LIST
+from weather_stations.weather_station import WeatherStation, WeatherAPIData, WeatherAPIResponse, WeatherStationReadings
 
 @pytest.fixture
 def test_station(station_type, station_configs):
@@ -25,23 +24,23 @@ def test_station_config(station_type, fake_station_configs):
     station_config_types: dictionary of config classes keyed on station type
     """
     
-    assert station_type in ewx_pws.CONFIG_CLASS_TYPES
-    StationConfigType = ewx_pws.CONFIG_CLASS_TYPES[station_type]
+    assert station_type in CONFIG_CLASS_TYPES
+    StationConfigType = CONFIG_CLASS_TYPES[station_type]
 
     # The code is retrieving the available station configurations of a specific station type from the
     # `fake_station_configs` dictionary. It then iterates over each configuration and performs some
     # operations on it.
-    available_configs = ewx_pws.configs_of_type(fake_station_configs, station_type)
+    available_configs = configs_of_type(fake_station_configs, station_type)
     for config in available_configs:
         c = StationConfigType.model_validate(config)
         assert isinstance(c, StationConfigType)
 
 def test_station_class_with_fake_config(station_type, fake_station_configs):
 
-    assert station_type in ewx_pws.CONFIG_CLASS_TYPES
-    StationClass = ewx_pws.STATION_CLASS_TYPES[station_type]
+    assert station_type in CONFIG_CLASS_TYPES
+    StationClass = STATION_CLASS_TYPES[station_type]
 
-    available_configs = ewx_pws.configs_of_type(fake_station_configs, station_type)
+    available_configs = configs_of_type(fake_station_configs, station_type)
     for config in available_configs:
         station = StationClass.init_from_dict(config)
         assert isinstance(station, WeatherStation)
@@ -61,11 +60,8 @@ def test_station_readings(station_config, utc_time_interval):
     station_type = station_config['station_type']
     logging.debug(f"testing type {station_type}")
 
-    assert station_type in ewx_pws.STATION_TYPE_LIST
-    StationClass =  ewx_pws.STATION_CLASS_TYPES[station_type]
-    
-    # from ewx_pws.zentra import ZentraStation
-    # StationClass = ZentraStation
+    assert station_type in STATION_TYPE_LIST
+    StationClass =  STATION_CLASS_TYPES[station_type]
     
     test_station = StationClass.init_from_dict(config = station_config)
     # first just check that our test station has a non-zero length station_type and is one on the list

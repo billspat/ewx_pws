@@ -5,7 +5,7 @@ from requests import Session, Request
 from datetime import datetime, timedelta, timezone
 
 from pydantic import Field
-from ewx_pws.weather_stations import WeatherStationConfig, WeatherStationReading, WeatherStationReadings, WeatherStation, STATION_TYPE
+from weather_stations.weather_station import WeatherStationConfig, WeatherStationReading, WeatherStation, STATION_TYPE
 
 class DavisConfig(WeatherStationConfig):
         station_type   : STATION_TYPE = 'DAVIS'

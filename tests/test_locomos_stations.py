@@ -1,7 +1,7 @@
 """LOCOMOS specific station tests"""
 
-from ewx_pws.locomos import LocomosStation, WeatherStation
-from ewx_pws.weather_stations import WeatherAPIData, WeatherAPIResponse
+from weather_stations.locomos import LocomosStation, WeatherStation
+from weather_stations.weather_station import WeatherAPIData, WeatherAPIResponse
 from ewx_pws.ewx_pws import configs_of_type
 import datetime, json, logging, pytest
 
