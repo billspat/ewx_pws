@@ -2,7 +2,9 @@ import logging, json
 from requests import post, Session, Request
 from datetime import datetime, timezone
 
-from weather_stations.weather_station import WeatherStationConfig, WeatherStation, STATION_TYPE
+from weather_stations import STATION_TYPE
+from weather_stations.models import WeatherStationConfig
+from weather_stations.weather_station import WeatherStation
 
 ## CONSTANT
 # LOCOMOS stations output leaf wetness in average millivolts.  

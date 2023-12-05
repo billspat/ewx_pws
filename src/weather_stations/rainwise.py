@@ -6,7 +6,9 @@ from datetime import datetime, timezone
 from zoneinfo import ZoneInfo  
 
 
-from weather_stations.weather_station import WeatherStationConfig, WeatherStationReading, WeatherStation, STATION_TYPE
+from weather_stations import STATION_TYPE
+from weather_stations.models import WeatherStationConfig
+from weather_stations.weather_station import WeatherStation
 
 class RainwiseConfig(WeatherStationConfig):
         station_type   : STATION_TYPE = 'RAINWISE'

@@ -3,8 +3,10 @@ import json,pytz
 from requests import get, Session, Request
 from datetime import datetime, timezone
 
-from pydantic import Field
-from weather_stations.weather_station import WeatherStationConfig, WeatherStation, STATION_TYPE
+
+from weather_stations import STATION_TYPE
+from weather_stations.models import WeatherStationConfig
+from weather_stations.weather_station import WeatherStation
 
 class SpectrumConfig(WeatherStationConfig):
         station_type   : STATION_TYPE = 'SPECTRUM'
