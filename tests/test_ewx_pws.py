@@ -4,6 +4,7 @@ import pytest, os, logging, csv
 from pprint import pprint
 from tempfile import NamedTemporaryFile
 from ewx_pws import ewx_pws
+from weather_stations import STATION_TYPE_LIST
 
 @pytest.fixture
 def sample_fixture_response():
@@ -79,7 +80,7 @@ def test_can_read_station_config_fake_file(fake_station_config_file):
         for field_name in ['station_type','station_id','install_date','tz']:
             assert(field_name in fake_station_config)
 
-        assert(fake_station_config['station_type'] in ewx_pws.STATION_TYPE_LIST)
+        assert(fake_station_config['station_type'] in STATION_TYPE_LIST)
 
     logging.debug(fake_station_configs)
 
@@ -141,7 +142,7 @@ def test_can_read_station_config_file(station_file):
         for field_name in ['station_type','station_id','install_date','tz']:
             assert(field_name in station_config)
 
-        assert(station_config['station_type'] in ewx_pws.STATION_TYPE_LIST)
+        assert(station_config['station_type'] in STATION_TYPE_LIST)
 
 def test_can_instantiate_station_config_file(station_file):
     stations = ewx_pws.station_dict_from_file(station_file)
@@ -156,7 +157,7 @@ def test_can_instantiate_station_config_file(station_file):
 def test_filter_by_station_type(station_file):
     logging.debug("this test ignored the station_type parameter")
     stations = ewx_pws.station_dict_from_file(station_file)
-    for station_type in ewx_pws.STATION_TYPE_LIST:
+    for station_type in STATION_TYPE_LIST:
         station_subset = ewx_pws.stations_of_type(stations = stations, station_type = station_type)
         for s in station_subset:
             assert s.config.station_type == station_type

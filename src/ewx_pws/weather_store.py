@@ -31,11 +31,7 @@ from sqlalchemy import engine,create_engine, inspect, text, insert
 import pandas, sqlite3, os, logging, json, csv
 from datetime import datetime
 
-from ewx_pws.weather_stations import WeatherStation
-
-from ewx_pws.ewx_pws import weather_station_factory
-from ewx_pws.weather_stations import WeatherStationReadings, WeatherAPIData, WeatherAPIResponse
-
+from weather_stations import WeatherStation, WeatherStationReadings, WeatherAPIData, WeatherAPIResponse
 
 class WeatherStore():
     """ this is a very simple class to build and use a SQLite database to 

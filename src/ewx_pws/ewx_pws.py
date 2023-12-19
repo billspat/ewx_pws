@@ -5,23 +5,29 @@ import json, os,csv, warnings, logging
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 
-from weather_stations import STATION_TYPE
-from weather_stations.weather_station import WeatherStation  
-from weather_stations.davis import DavisStation, DavisConfig
-from weather_stations.locomos import LocomosStation, LocomosConfig
-from weather_stations.rainwise import RainwiseStation, RainwiseConfig
-from weather_stations.spectrum import SpectrumStation, SpectrumConfig
-from weather_stations.onset import OnsetStation, OnsetConfig
-from weather_stations.zentra import ZentraStation, ZentraConfig
+# move all of this to the weather stations package, where all of these things are defined
+# from weather_stations import STATION_TYPE
+# from weather_stations.weather_station import WeatherStation  
+# from weather_stations.davis import DavisStation, DavisConfig
+# from weather_stations.locomos import LocomosStation, LocomosConfig
+# from weather_stations.rainwise import RainwiseStation, RainwiseConfig
+# from weather_stations.spectrum import SpectrumStation, SpectrumConfig
+# from weather_stations.onset import OnsetStation, OnsetConfig
+# from weather_stations.zentra import ZentraStation, ZentraConfig
+# STATION_CLASS_TYPES = {'ZENTRA': ZentraStation, 'ONSET': OnsetStation, 'DAVIS': DavisStation,'RAINWISE': RainwiseStation, 'SPECTRUM':SpectrumStation, 'LOCOMOS':LocomosStation }
+# CONFIG_CLASS_TYPES = {'ZENTRA': ZentraConfig, 'ONSET': OnsetConfig, 'DAVIS': DavisConfig,'RAINWISE': RainwiseConfig, 'SPECTRUM':SpectrumConfig, 'LOCOMOS':LocomosConfig }
+
+from weather_stations import STATION_TYPE, STATION_CLASS_TYPES, CONFIG_CLASS_TYPES
+from weather_stations.weather_station import WeatherStation
 
 
-from ewx_pws.time_intervals import previous_fifteen_minute_period
+# from ewx_pws.time_intervals import previous_fifteen_minute_period
+
+#### TODO move to a config module and class accessible across the package
 
 load_dotenv()
 logging.basicConfig(level=logging.NOTSET, format='%(asctime)s-%(process)d-%(levelname)s-%(message)s')
 
-STATION_CLASS_TYPES = {'ZENTRA': ZentraStation, 'ONSET': OnsetStation, 'DAVIS': DavisStation,'RAINWISE': RainwiseStation, 'SPECTRUM':SpectrumStation, 'LOCOMOS':LocomosStation }
-CONFIG_CLASS_TYPES = {'ZENTRA': ZentraConfig, 'ONSET': OnsetConfig, 'DAVIS': DavisConfig,'RAINWISE': RainwiseConfig, 'SPECTRUM':SpectrumConfig, 'LOCOMOS':LocomosConfig }
 
 # deprecated = see WeatherCollector class
 def get_readings(stations:list,

@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 
 from pydantic import Field
 
-from weather_stations import STATION_TYPE
+from . import STATION_TYPE
 from weather_stations.models import WeatherStationConfig
 from weather_stations.weather_station import WeatherStation
 

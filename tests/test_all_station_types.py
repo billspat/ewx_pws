@@ -4,8 +4,8 @@ import pytest, logging, json
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo, available_timezones
 
-from ewx_pws.ewx_pws import STATION_CLASS_TYPES,CONFIG_CLASS_TYPES,configs_of_type 
-from weather_stations import STATION_TYPE_LIST
+from ewx_pws.ewx_pws import configs_of_type
+from weather_stations import STATION_CLASS_TYPES,CONFIG_CLASS_TYPES, STATION_TYPE_LIST
 from weather_stations.weather_station import WeatherStation
 from weather_stations.models import WeatherAPIData, WeatherAPIResponse, WeatherStationReadings
 

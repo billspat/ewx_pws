@@ -7,9 +7,10 @@ class that engages with WeatherStations to pull weather data from all stations f
 currently reads stations from a csv file and saves to disk.   Should remove that and work with a data store. 
 note: there is some overlap with ewx_pws.py
 """
-import os,json, csv
+import os, csv
 from ewx_pws.ewx_pws import stations_from_file
-from ewx_pws.weather_stations import WeatherAPIData,WeatherStationReadings, WeatherStation
+from weather_stations.models import WeatherAPIData,WeatherStationReadings
+from weather_stations.weather_station import WeatherStation
 from ewx_pws.time_intervals import UTCInterval
 
 

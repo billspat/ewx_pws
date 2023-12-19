@@ -7,7 +7,7 @@ import pytest, random, string, json
 from os import environ, path, remove
 import sys
 import importlib
-from ewx_pws.ewx_pws import logging, read_station_configs, station_types_present, configs_of_type, stations_of_type
+from ewx_pws.ewx_pws import logging, read_station_configs, station_types_present, configs_of_type
 from datetime import datetime, timezone, timedelta
 from zoneinfo import ZoneInfo
 # from tempfile import NamedTemporaryFile

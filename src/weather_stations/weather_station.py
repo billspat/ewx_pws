@@ -39,8 +39,8 @@ from uuid import uuid4
 # package local
 from ewx_pws.time_intervals import is_tz_aware, UTCInterval
 from importlib.metadata import version
-from weather_stations import STATION_TYPE
-from weather_stations.models import WeatherStationConfig, WeatherStationReadings, WeatherAPIData, WeatherAPIResponse
+# from weather_stations import STATION_TYPE
+from .models import WeatherStationConfig, WeatherStationReadings, WeatherAPIData, WeatherAPIResponse
 
 class GenericConfig(WeatherStationConfig):
     """This configuration is used for testing, dev and for base class.  Station specific config is simply stored

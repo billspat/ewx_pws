@@ -4,7 +4,7 @@ import json,pytz, time
 from requests import Session, Request
 from datetime import datetime, timedelta, timezone
 
-from pydantic import Field
+# from pydantic import Field
 from weather_stations import STATION_TYPE
 from weather_stations.models import WeatherStationConfig, WeatherStationReading
 from weather_stations.weather_station import WeatherStation
